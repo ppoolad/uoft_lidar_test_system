@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "asic.h"
+#include "../asic.h"
 #include "asic_control.h"
 
 void set_gpio_value(struct gpiod_chip *chip, int gpio, int value) {
