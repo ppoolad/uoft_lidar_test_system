@@ -26,8 +26,8 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "../axisfifo/axis-fifo.h"
-#include "asic.h"
+#include "../../../axisfifo/axis-fifo.h"
+#include "../asic.h"
 #include "asic_control.h"
 #include <gpiod.h>
 /*----------------------------------------------------------------------------
@@ -40,6 +40,7 @@
 #define DEBUG_PRINT(fmt, args...) printf("DEBUG %s:%d(): " fmt, \
         __func__, __LINE__, ##args)
 
+#define DEBUG 1
 struct thread_data {
     int rc;
 };
@@ -72,6 +73,8 @@ FILE *fp;
 //led values indicating running
 int led_values[8] = {0,0,0,0,0,0,0,1};
 //shift 8 bit array;
+
+int runtime = 200; //run for n minutes
 void shift_array(int *array, int size, int insert){
     //int temp = array[size-1];
     for (int i = size-1; i > 0; i--)
@@ -162,8 +165,8 @@ int main(int argc, char **argv)
 
     /* perform noops */
     while (running) {
-       sleep(20);
-       running = false;
+       sleep(600); //run for n minutes
+       quit();
     }
     // printf("waiting....\n");
     // sleep(1); //wait a bit until fifo is full
@@ -216,24 +219,23 @@ static void *read_from_fifo_thread_fn(void *data)
         {
             bytesFifo = read(readFifoFd, buf, MAX_BUF_SIZE_BYTES);
             if (bytesFifo > 0) {
-                DEBUG_PRINT("bytes from fifo %d\n",bytesFifo);
-                DEBUG_PRINT("Read : \n\r");
-                //for (int i = 0; i < bytesFifo; i++)
-                //{
-                    printf("0x%02x",buf[bytesFifo-1]);
-                    printf("%02x",buf[bytesFifo-2]);
-                    printf("%02x",buf[bytesFifo-3]);
-                    printf("%02x\n\r",buf[bytesFifo-4]);
-                    rx_values[packets_rx] = buf[bytesFifo-1];
-                    rx_values[packets_rx+1] = buf[bytesFifo-2];
-                    rx_values[packets_rx+2] = buf[bytesFifo-3];
-                    rx_values[packets_rx+3] = buf[bytesFifo-4];
-
-                //}
-                //DEBUG_PRINT("\n\r");
-                packets_rx = packets_rx + 4;
+                if(DEBUG){
+                    DEBUG_PRINT("bytes from fifo %d\n",bytesFifo);
+                    DEBUG_PRINT("Read : \n\r");
+                }
+                for (int memidx = 0; memidx < 4; memidx++)
+                {
+                    if(DEBUG){
+                        if(memidx == 0)
+                            printf("0x%02x",buf[bytesFifo-1-memidx]);
+                        else
+                            printf("%02x",buf[bytesFifo-1-memidx]);
+                    }
+                    rx_values[packets_rx] = buf[bytesFifo-1-memidx];
+                    packets_rx = packets_rx + 1;
+                }
+                printf("\n\r");
             }
-            //DEBUG_PRINT("packets_rx %d\n\r",packets_rx);
         }
         DEBUG_PRINT("%d packets read\n\r", packets_rx-4);
         //write to file
@@ -291,10 +293,11 @@ static int process_options(int argc, char * argv[])
 
         for (;;) {
             int option_index = 0;
-            static const char *short_options = "hr:t:";
+            static const char *short_options = "hrn:t:";
             static const struct option long_options[] = {
                     {"help", no_argument, 0, 'h'},
                     {"devRx", required_argument, 0, 'r'},
+                    {"nseconds", required_argument, 0, 'n'},
                     {0,0,0,0},
                     };
 
@@ -315,6 +318,10 @@ static int process_options(int argc, char * argv[])
                 case 'h':
                     display_help(argv[0]);
                     exit(0);
+                    break;
+
+                case 'n':
+                    runtime = atoi(optarg);
                     break;
                     }
             }

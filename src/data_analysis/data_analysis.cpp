@@ -96,11 +96,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // std::cout << "Extracted memory words:" << std::endl;
-    // for (int word : memory_words) {
-    //     output_file << word << std::endl;
-    //     std::cout << "0x" << std::hex << word << std::endl;
-    // }
+    std::cout << "Extracted memory words:" << std::endl;
+    for (int word : memory_words) {
+        output_file << word << std::endl;
+        //std::cout << "0x" << std::hex << word << std::endl;
+    }
 
     output_file.close();
     return 0;
