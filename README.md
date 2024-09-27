@@ -37,3 +37,8 @@ The C Program is used to collect data from the ASIC's serialzier via FPGA LVDS i
 ## Compilation and Execution
 
 each folder has a Makefile inside. just use "make"
+
+### Requirements
+
+- gpiod library must be installed on linux
+- axi_fifo driver [(repo)](https://github.com/jacobfeder/axisfifo/tree/master)
