@@ -31,4 +31,16 @@ $(TARGET): $(OBJS)
 clean:
 	rm -f $(OBJS) $(TARGET)
 
+# Separate build for tdc_start and asic_control
+tdc_start: tdc_start.o asic_control.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+
+# Compile tdc_start.c to tdc_start.o
+tdc_start.o: tdc_start.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile asic_control.c to asic_control.o
+asic_control.o: asic_control.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(LIBS)
+
 .PHONY: all clean

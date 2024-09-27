@@ -29,6 +29,11 @@ gpio_app/
 
 The C++ program is invoked in terminal by data_analysis_release <ascii_outputs_from_data_collector.txt> <number of packet to extract> and isolates readout from one of the channels. Then, DrawHist.py reads "extracted_memory_word.txt" and draws histograms.
 
-### Compilation and Execution
+## C Program: data_collector
+
+### Description
+The C Program is used to collect data from the ASIC's serialzier via FPGA LVDS inputs (Refer to simple_rx repo). and save them in a text file. use `xxd -c 4 -g 4` to format them into ascii. 
+
+## Compilation and Execution
 
 each folder has a Makefile inside. just use "make"
