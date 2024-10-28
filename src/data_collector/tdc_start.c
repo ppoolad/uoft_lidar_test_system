@@ -1,6 +1,8 @@
 #include <gpiod.h>
+#include <errno.h>
+#include <stdio.h>
 #include "asic_control.h"
-#include "../asic.h"
+#include "asic.h"
 int main(int argc, char **argv)
 {
     //globlas

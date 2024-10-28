@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "../asic.h"
+#include "asic.h"
 #include "asic_control.h"
 
 void set_gpio_value(struct gpiod_chip *chip, int gpio, int value) {
@@ -73,6 +73,8 @@ void get_gpio_array(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios, int 
 
 int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     int gpio_values[HPC1_NUM_GPIO] = {0};
+    // don't reset the tdc
+    gpio_values[TDC_ARESETN] = 1;
     set_gpio_array(chip, gpios, gpio_values);
         
     gpio_values[TDC_ARESETN] = 1; 	 //reset not
