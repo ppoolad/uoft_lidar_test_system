@@ -6,6 +6,8 @@
  * 
  **/
 
+//todo: clean up commands somehow
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -53,6 +55,7 @@ pthread_t read_from_fifo_thread;
 static volatile bool running = true;
 static char _opt_dev_rx[255];
 static int readFifoFd;
+static char output_file[255] = "tdc_values.txt";
 
 static void signal_handler(int signal);
 static void *read_from_fifo_thread_fn(void *data);
@@ -77,7 +80,7 @@ FILE *fp;
 int led_values[8] = {0,0,0,0,0,0,0,1};
 //shift 8 bit array;
 
-int runtime = 600; //run for n secs
+int runtime = 120; //run for n secs
 void shift_array(int *array, int size, int insert){
     //int temp = array[size-1];
     for (int i = size-1; i > 0; i--)
@@ -160,7 +163,7 @@ int main(int argc, char **argv)
 
     //create tdc chain
     unsigned int chain_data[4] = {0};
-    int enables[] = {0,0,0,1,1,0};
+    int enables[] = {1,0,0,0,0,0};
     int offsets[] = {0,0,0,0,0};
     create_tdc_chain(enables, offsets, chain_data);
     // configure the chain so only tdc channel 0 is enable
@@ -178,7 +181,7 @@ int main(int argc, char **argv)
     set_gpio_array(chipled, &leds, led_values);
     
     //open file
-    fp = fopen("tdc_values_ch3exclusives.txt","w");
+    fp = fopen(output_file,"w");
     if (fp == NULL) {
         perror("Failed to open file");
         return -1;
@@ -344,11 +347,12 @@ static int process_options(int argc, char * argv[])
 
         for (;;) {
             int option_index = 0;
-            static const char *short_options = "hrn:t:";
+            static const char *short_options = "hrno:t:";
             static const struct option long_options[] = {
                     {"help", no_argument, 0, 'h'},
                     {"devRx", required_argument, 0, 'r'},
                     {"nseconds", required_argument, 0, 'n'},
+                    {"output", required_argument, 0, 'o'},
                     {0,0,0,0},
                     };
 
@@ -373,6 +377,10 @@ static int process_options(int argc, char * argv[])
 
                 case 'n':
                     runtime = atoi(optarg);
+                    break;
+
+                case 'o':
+                    strcpy(output_file, optarg);
                     break;
                     }
             }

@@ -78,8 +78,8 @@ int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     set_gpio_array(chip, gpios, gpio_values);
         
     gpio_values[TDC_ARESETN] = 1; 	 //reset not
-    gpio_values[TDC_START_MODE] = 1; 	 //enable start sych mode
-    gpio_values[START_SIGNAL] = 1;
+    gpio_values[TDC_START_MODE] = 0; 	 //enable start sych mode
+    //gpio_values[START_SIGNAL] = 1;
     gpio_values[TDC_EN] = 1;		 //enable tdc
     gpio_values[DIGITAL_EN] = 1;		 //enable tdc
     gpio_values[DSP_ARESETN] = 1;
@@ -88,11 +88,11 @@ int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     gpio_values[TDC_STOP_DEBUG_MODE] = 1;//set this one to get external signal;
     
     set_gpio_array(chip, gpios, gpio_values);
-    printf("waiting....\n");
-    sleep(5);
-    gpio_values[START_SIGNAL] = 0;
-    printf("set start to 0\n");
-    set_gpio_array(chip, gpios, gpio_values);
+    //printf("waiting....\n");
+    //sleep(5);
+    //gpio_values[START_SIGNAL] = 0;
+    //printf("set start to 0\n");
+    //set_gpio_array(chip, gpios, gpio_values);
     printf("done\n");
     
     return 0;

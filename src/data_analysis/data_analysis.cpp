@@ -70,12 +70,13 @@ std::unordered_map<int, int> calculate_histogram(const std::vector<int> &memory_
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <filename> <packet_number>" << std::endl;
+    if (argc < 4) {
+        std::cerr << "Usage: " << argv[0] << " <filename> <packet_number> <output_name>" << std::endl;
         return 1;
     }
     std::string filename = argv[1];
     int packet_number = std::stoi(argv[2]);
+    std::string output_name = argv[3];
     std::vector<int> memory_words = extract_memory_words(filename, packet_number);
     if (memory_words.empty()) {
         std::cerr << "Error extracting memory words" << std::endl;
@@ -90,7 +91,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Store the content of the vector as integers in a text file
-    std::ofstream output_file("extracted_memory_words.txt");
+    std::ofstream output_file(output_name+"extracted_memory_words.txt");
     if (!output_file.is_open()) {
         std::cerr << "Error opening output file" << std::endl;
         return 1;

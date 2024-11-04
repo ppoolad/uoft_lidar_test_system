@@ -11,7 +11,7 @@ LIBS = -lgpiod
 TARGET = tdc_test
 
 # Source files
-SRCS = tdc_test.c asic_control.c
+SRCS = tdc_test.c asic_control.c conf.c
 
 # Object files
 OBJS = $(SRCS:.c=.o)
