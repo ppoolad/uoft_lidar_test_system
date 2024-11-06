@@ -63,6 +63,7 @@ static int process_options(int argc, char * argv[]);
 static void print_opts();
 static void display_help(char * progName);
 static void quit(void);
+void frame_process(char* packets, int size);
 
 //globlas
 //gpio stuff
@@ -282,6 +283,11 @@ static void *read_from_fifo_thread_fn(void *data)
                     rx_values[packets_rx] = buf[memidx*4+3-nbytes]; //buf[bytesFifo-1-memidx];
                     packets_rx = packets_rx + 1;
                     }
+                    //read and print 4 bytes in little endian
+
+                    //int value = *(int*)&rx_values[packets_rx-4];
+                    //value = __builtin_bswap32(value); // Swap byte order to convert from little endian to big endian
+                    //printf("0x%08x\n", value);
                     if(DEBUG)
                         printf("\n\r");
                 }
@@ -290,6 +296,7 @@ static void *read_from_fifo_thread_fn(void *data)
         if(DEBUG)
             DEBUG_PRINT("%d packets read\n\r", packets_rx-4);
         //write to file
+        frame_process(rx_values,packets_rx-4);
         fwrite(rx_values,sizeof(char),packets_rx-4,fp);
         packets_rx = 0;
         rx_occupancy = 0;
@@ -306,6 +313,68 @@ static void *read_from_fifo_thread_fn(void *data)
     return (void *)0;
 }
 
+void frame_process(char* packets, int size){
+    //process the packets
+    if (size % 4 != 0) {
+        printf("Invalid packet size\n");
+        return;
+    }
+
+    int num_packets = size / 4;
+    float rolling_sum[6] = {0};
+    float alpha = 0.00001;
+    float rolling_avg[6] = {0};
+    int packet_index = 0;
+    int correct = 0;
+    while (packet_index < num_packets) {
+        int packet = 0;
+        packet = __builtin_bswap32(*(int*)&packets[4*packet_index]);
+        // Check for Start of Frame (SOF) and End of Frame (EOF)
+        if (packet == 0xAA0AAAAA) {
+            //printf("Start of Frame detected\n");
+            // Check for End of Frame (EOF)
+            if (packet_index + 4*7 >= num_packets) {
+                //printf("Invalid packet size\n");
+                break;
+            }
+            packet = __builtin_bswap32(*(int*)&packets[4*packet_index + 4*7]);
+            if (packet == 0xAAFFFFFF) {
+                //printf("End of Frame detected\n");
+                correct = 1;
+                packet_index++;
+                //continue;
+            } else {
+                // Skip to next packet
+                printf("Invalid End of Frame\n");
+                packet_index++;
+                correct = 0;
+                continue;
+            }
+        } 
+        if (correct == 0){
+            packet_index++;
+            continue;
+        }
+        // if we are here, we have a valid frame
+        // Check header
+        //correct =
+        for (int i = 0; i < 6; i++) {
+            packet = (__builtin_bswap32(*(int*)&packets[4*packet_index + 4*i]));
+            //printf("channel: %d, Packet: 0x%08X\n", i, packet);
+            // Calculate rolling average
+            rolling_avg[i] =  100*rolling_avg[i] + 100*((alpha) * ((float)(packet & 0x00FFFFFF) - rolling_avg[i]));
+            rolling_avg[i] = rolling_avg[i] / 100;
+            //rolling_avg[i] = rolling_sum[i] / alpha;
+            //printf("channel: %d, Rolling Average: %3f\n", i, rolling_avg[i]);
+        }
+        packet_index += 7;
+        correct = 0;
+        //printf("Packet: 0x%08X, Rolling Average: %d\n", packet, rolling_avg);
+    }
+    // print all averages so far in single line
+    printf("\rCH0: %3f, CH1: %3f, CH2: %3f, CH3: %3f, CH4: %3f, CH5: %3f", rolling_avg[0], rolling_avg[1], rolling_avg[2], rolling_avg[3], rolling_avg[4], rolling_avg[5]);
+
+}
 static void signal_handler(int signal)
 {
     switch (signal) {

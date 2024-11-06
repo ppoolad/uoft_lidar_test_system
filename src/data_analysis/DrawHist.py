@@ -4,8 +4,8 @@ import numpy as np
 def read_memory_words(filename, max_value = 2**6):
     #n=0
     def is_valid_number(line):
-    	number = int(line)
-    	return 0 <= number <= max_value
+        number = int(line)
+        return 0 <= number <= max_value
     with open(filename, 'r') as file:
         lines = file.readlines()
         n = len(lines)
