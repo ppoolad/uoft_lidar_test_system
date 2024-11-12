@@ -71,7 +71,9 @@ struct gpiod_chip *chip;// = gpiod_chip_open_by_name(HPC1_CHIP_NAME);
 struct gpiod_chip *chipled;// = gpiod_chip_open_by_name(LED_CHIP_NAME);
 struct gpiod_line_bulk gpios;
 struct gpiod_line_bulk leds;
-
+float rolling_avg[6] = {0};
+float alpha_max = 0.001;
+int queue_processed = 0;
 //large array to store the values
 char rx_values[MAX_BUF_SIZE_BYTES+16] = {0};
 //file handle to save the values
@@ -164,7 +166,7 @@ int main(int argc, char **argv)
 
     //create tdc chain
     unsigned int chain_data[4] = {0};
-    int enables[] = {1,0,0,0,0,0};
+    int enables[] = {1,0,1,0,1,1};
     int offsets[] = {0,0,0,0,0};
     create_tdc_chain(enables, offsets, chain_data);
     // configure the chain so only tdc channel 0 is enable
@@ -313,6 +315,7 @@ static void *read_from_fifo_thread_fn(void *data)
     return (void *)0;
 }
 
+
 void frame_process(char* packets, int size){
     //process the packets
     if (size % 4 != 0) {
@@ -321,11 +324,14 @@ void frame_process(char* packets, int size){
     }
 
     int num_packets = size / 4;
-    float rolling_sum[6] = {0};
-    float alpha = 0.00001;
-    float rolling_avg[6] = {0};
     int packet_index = 0;
     int correct = 0;
+    //alpha shoud start from 1/10 and go to alpha max (1/100000) based on number of times this function is executed (queue processed)
+    float alpha = (1/(10*queue_processed));
+    queue_processed++;
+    if (alpha < alpha_max)
+        alpha = alpha_max;
+
     while (packet_index < num_packets) {
         int packet = 0;
         packet = __builtin_bswap32(*(int*)&packets[4*packet_index]);
@@ -333,7 +339,7 @@ void frame_process(char* packets, int size){
         if (packet == 0xAA0AAAAA) {
             //printf("Start of Frame detected\n");
             // Check for End of Frame (EOF)
-            if (packet_index + 4*7 >= num_packets) {
+            if (4*packet_index + 4*7 >= num_packets) {
                 //printf("Invalid packet size\n");
                 break;
             }
@@ -362,8 +368,8 @@ void frame_process(char* packets, int size){
             packet = (__builtin_bswap32(*(int*)&packets[4*packet_index + 4*i]));
             //printf("channel: %d, Packet: 0x%08X\n", i, packet);
             // Calculate rolling average
-            rolling_avg[i] =  100*rolling_avg[i] + 100*((alpha) * ((float)(packet & 0x00FFFFFF) - rolling_avg[i]));
-            rolling_avg[i] = rolling_avg[i] / 100;
+            rolling_avg[i] =  rolling_avg[i] + ((alpha) * ((float)(packet & 0x00FFFFFF) - rolling_avg[i]));
+            rolling_avg[i] = rolling_avg[i];
             //rolling_avg[i] = rolling_sum[i] / alpha;
             //printf("channel: %d, Rolling Average: %3f\n", i, rolling_avg[i]);
         }
