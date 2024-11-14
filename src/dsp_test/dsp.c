@@ -2,7 +2,7 @@
  * @file tdc_test.c
  * @author Pooya Poolad ppoolad@outlook.com
  *      based on the driver by Jason Gutel jason.gutel@gmail.com
- * resets TDC and starts recording, stores them into a file
+ * resets DSP and starts recording, stores them into a file
  * 
  **/
 
@@ -186,6 +186,7 @@ int main(int argc, char **argv)
     set_gpio_array(chip, &gpios, hpc1_values);
 
     //reset/unreset dsp
+    dsp_test(chip, &gpios);
     dsp_reset(chip);
     dsp_unreset(chip);
 
@@ -230,7 +231,7 @@ int main(int argc, char **argv)
     printf("turn off serializer\n");
     dsp_serializer(0,chip);
 
-    printf("reset tdc\n");
+    printf("reset DSP\n");
     dsp_reset(chip);
     
     gpiod_chip_close(chip);
@@ -312,11 +313,7 @@ static void *read_from_fifo_thread_fn(void *data)
         fwrite(rx_values,sizeof(char),packets_rx-4,fp);
         packets_rx = 0;
         rx_occupancy = 0;
-        //restart tdc
-        if(DEBUG)
-            DEBUG_PRINT("restart tdc\n\r");
-        //tdc_unreset(chip);
-        //tdc_serializer(1,chip);
+
         enable_rx();    
         usleep(1000); //necessary to let the fifo fill up        
         shift_array(led_values,8,!led_values[7]);

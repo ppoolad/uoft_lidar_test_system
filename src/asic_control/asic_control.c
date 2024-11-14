@@ -73,7 +73,24 @@ void get_gpio_array(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios, int 
     }
     gpiod_line_release_bulk(gpios);
 }
+// start dsp test protocol
+int dsp_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
+    int gpio_values[HPC1_NUM_GPIO] = {0};
+    // don't reset the tdc
 
+    gpio_values[DIGITAL_EN] = 1;		 //enable tdc
+    gpio_values[DSP_ARESETN] = 1;
+    gpio_values[TOF_TEST_MODE] = 1;
+    gpio_values[SERIAL_TOF_EN] = 1;
+
+    dsp_select_pixel(chip, 0);
+    set_gpio_array(chip, gpios, gpio_values);
+    dsp_reset(chip);
+    dsp_unreset(chip);
+    printf("done\n");
+    
+    return 0;
+}
 // start tdc_test_protocol
 int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     int gpio_values[HPC1_NUM_GPIO] = {0};
