@@ -2,6 +2,7 @@
 CC = gcc
 CXX = g++
 LDFLAGS = -lgpiod -lm -lpthread
+LDFLAGSPP = -lm -lpthread
 
 # Directories
 SRC_DIR = src
@@ -64,6 +65,7 @@ release: $(patsubst $(DEBUG_DIR)/%, $(RELEASE_DIR)/%, $(TARGETS))
 
 shared: $(SHARED_DIR)/tdc_test.so $(SHARED_DIR)/tdc_start.so $(SHARED_DIR)/data_analysis.so $(SHARED_DIR)/simple_rx.so $(SHARED_DIR)/asic_control.so $(SHARED_DIR)/conf.so $(SHARED_DIR)/dsp.so
 
+pp: $(DEBUG_DIR)/data_analysis
 
 $(DEBUG_DIR)/%.o: $(ASIC_CONTROL_DIR)/%.c
 	@mkdir -p $(DEBUG_DIR)
@@ -106,7 +108,7 @@ $(DEBUG_DIR)/tdc_start: $(TDC_START_OBJ)
 	$(CC) $(CFLAGS) $(TDC_START_OBJ) -o $@ $(LDFLAGS)
 
 $(DEBUG_DIR)/data_analysis: $(DATA_ANALYSIS_OBJS)
-	$(CXX) $(CXXFLAGS) $(DATA_ANALYSIS_OBJS) -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(DATA_ANALYSIS_OBJS) -o $@ $(LDFLAGSPP)
 
 $(DEBUG_DIR)/dsp: $(DSP_TEST_OBJS)
 	$(CC) $(CFLAGS) $(DSP_TEST_OBJS) -o $@ $(LDFLAGS)
