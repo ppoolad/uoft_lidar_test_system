@@ -29,6 +29,7 @@
  */
 void create_tdc_chain(int* enables, int* offsets, int* chain);
 int configure_chain(int* data, int num_words, int num_bits, int time_out);
+int configure_chain_dsp(int* data, int num_words, int num_bits, int time_out);
 void create_dsp_tof_chain(int number, int* chain);
 
 #endif

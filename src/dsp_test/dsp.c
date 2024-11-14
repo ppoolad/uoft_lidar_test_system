@@ -213,7 +213,7 @@ int main(int argc, char **argv)
     set_rx_nbits(24); //16 data + 8 header
     //enable rx 
     enable_rx();
-
+    dsp_serializer(1,chip);
     /* perform noops */
     // start the clock
     clock_t start = clock();
@@ -221,8 +221,8 @@ int main(int argc, char **argv)
     while (running || (clock() - start) < runtime * CLOCKS_PER_SEC) {
         //send random number to DSP
         int random_number = generate_random_number(1000, 10);
-        chain_data[3] = random_number;
-        configure_chain(chain_data, 4, 16, 1000);
+        chain_data[3] = 0xFF&random_number;
+        configure_chain_dsp(chain_data, 4, 16, 1000);
         // just give it a random number and wait for it to converge
     }
 
@@ -392,7 +392,11 @@ static void signal_handler(int signal)
 {
     switch (signal) {
         case SIGINT:
+            running = false;
+            break;
         case SIGTERM:
+            running = false;
+            break;
         case SIGQUIT:
             running = false;
             break;

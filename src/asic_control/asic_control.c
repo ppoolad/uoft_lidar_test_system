@@ -82,11 +82,12 @@ int dsp_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     gpio_values[DSP_ARESETN] = 1;
     gpio_values[TOF_TEST_MODE] = 1;
     gpio_values[SERIAL_TOF_EN] = 1;
+    gpio_values[READ_EN] = 1;
 
     dsp_select_pixel(chip, 0);
     set_gpio_array(chip, gpios, gpio_values);
-    dsp_reset(chip);
-    dsp_unreset(chip);
+    //dsp_reset(chip);
+    //dsp_unreset(chip);
     printf("done\n");
     
     return 0;
