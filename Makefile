@@ -2,6 +2,7 @@
 CC = gcc
 CXX = g++
 LDFLAGS = -lgpiod -lm -lpthread
+LDFLAGSPP = -lm -lpthread
 
 # Directories
 SRC_DIR = src
@@ -107,7 +108,7 @@ $(DEBUG_DIR)/tdc_start: $(TDC_START_OBJ)
 	$(CC) $(CFLAGS) $(TDC_START_OBJ) -o $@ $(LDFLAGS)
 
 $(DEBUG_DIR)/data_analysis: $(DATA_ANALYSIS_OBJS)
-	$(CXX) $(CXXFLAGS) $(DATA_ANALYSIS_OBJS) -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(DATA_ANALYSIS_OBJS) -o $@ $(LDFLAGSPP)
 
 $(DEBUG_DIR)/dsp: $(DSP_TEST_OBJS)
 	$(CC) $(CFLAGS) $(DSP_TEST_OBJS) -o $@ $(LDFLAGS)
