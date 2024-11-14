@@ -41,6 +41,12 @@ void disable_rx() {
     *rx_register &= ~RX_ENABLE_MASK;
 }
 
+void set_rx_nbits(int nbits) {
+    // 8 MSB bits of the 32 bit register are used to set the number of bits to read from the fifo
+    *rx_register &= 0x00FFFFFF;
+    *rx_register |= (nbits << 24);
+}
+
 void cleanup_rx() {
     munmap((void *)rx_register, sizeof(uint32_t));
 }

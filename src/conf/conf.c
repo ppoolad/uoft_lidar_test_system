@@ -30,6 +30,16 @@ void create_tdc_chain(int* enables, int* offsets, int* chain) {
 
 }
 
+void create_dsp_tof_chain(int number, int* chain){
+    chain[0] = 0;
+    chain[1] = 0;
+    chain[2] = 0;
+    chain[3] = number;
+    
+    printf("Chain: 0x%08x 0x%08x 0x%08x 0x%08x\n", chain[0], chain[1], chain[2], chain[3]);
+
+}
+
 int configure_chain(int* data, int num_words, int num_bits, int time_out) {
     int fd;
     void *map_base;

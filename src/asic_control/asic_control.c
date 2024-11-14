@@ -6,6 +6,8 @@
 #include "asic.h"
 #include "asic_control.h"
 
+
+//set value of a signle gpio
 void set_gpio_value(struct gpiod_chip *chip, int gpio, int value) {
     struct gpiod_line *line = gpiod_chip_get_line(chip, gpio);
     if (!line) {
@@ -23,6 +25,7 @@ void set_gpio_value(struct gpiod_chip *chip, int gpio, int value) {
     gpiod_line_release(line);
 }
 
+//set value of a gpio array
 void set_gpio_array(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios, int *value) {
     int line = gpiod_chip_get_all_lines(chip, gpios);
     if (line < 0) {
@@ -71,6 +74,7 @@ void get_gpio_array(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios, int 
     gpiod_line_release_bulk(gpios);
 }
 
+// start tdc_test_protocol
 int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     int gpio_values[HPC1_NUM_GPIO] = {0};
     // don't reset the tdc
@@ -98,6 +102,7 @@ int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     return 0;
 }
 
+// start tds serializer
 int tdc_serializer(int power_state,struct gpiod_chip *chip){
 
     //set power state 
@@ -114,6 +119,40 @@ int tdc_reset(struct gpiod_chip *chip){
 
 int tdc_unreset(struct gpiod_chip *chip){
     set_gpio_value(chip, TDC_ARESETN, 1);
+    return 0;
+}
+
+int dsp_reset(struct gpiod_chip *chip){
+    set_gpio_value(chip, DSP_ARESETN, 0);
+    return 0;
+}
+
+int dsp_unreset(struct gpiod_chip *chip){
+    set_gpio_value(chip, DSP_ARESETN, 1);
+    return 0;
+}
+
+int dsp_enable(struct gpiod_chip *chip){
+    set_gpio_value(chip, DIGITAL_EN, 1);
+    return 0;
+}
+
+int dsp_disable(struct gpiod_chip *chip){
+    set_gpio_value(chip, DIGITAL_EN, 0);
+    return 0;
+}
+
+int dsp_select_pixel(struct gpiod_chip *chip, int pixel){
+    int pixel_values[4] = {pixel&0x08,pixel&0x04,pixel&0x02, pixel&0x01};
+    set_gpio_value(chip, PIXEL0, pixel_values[0]);
+    set_gpio_value(chip, PIXEL1, pixel_values[1]);
+    set_gpio_value(chip, PIXEL2, pixel_values[2]);
+    set_gpio_value(chip, PIXEL3, pixel_values[3]);
+
+    return 0;
+}
+int dsp_serializer(int power_state,struct gpiod_chip *chip){
+    set_gpio_value(chip, READ_EN, power_state);
     return 0;
 }
 // int main(){
