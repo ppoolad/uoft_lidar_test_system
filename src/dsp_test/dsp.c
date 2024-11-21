@@ -87,7 +87,7 @@ int queue_processed = 0;
 char rx_values[MAX_BUF_SIZE_BYTES+16] = {0};
 //file handle to save the values
 FILE *fp;
-
+FILE *fprnd;
 //led values indicating running
 int led_values[8] = {0,0,0,0,0,0,0,1};
 //shift 8 bit array;
@@ -205,6 +205,11 @@ int main(int argc, char **argv)
         perror("Failed to open file");
         return -1;
     }
+    fprnd = fopen("random_values.txt","w");
+    if (fprnd == NULL) {
+        perror("Failed to open file");
+        return -1;
+    }
     /* start thread listening for fifo receive packets */
     rc = pthread_create(&read_from_fifo_thread, NULL, read_from_fifo_thread_fn,
             (void *)NULL);
@@ -221,7 +226,17 @@ int main(int argc, char **argv)
     int chain_data[4] = {0,0,0,0};
     while (running && (int)(clock() - start)/CLOCKS_PER_SEC < runtime) {
         //send random number to DSP
-        int random_number = generate_random_number(8500, 10,1);
+        int random_number;
+        // generate a uniform random between 0 and 1
+        double u = (double)rand() / RAND_MAX;
+        if (u < 0.7) {
+            // generate a random number between 0 and 2^16 with mean of 0 and std dev of 1
+            random_number = generate_random_number(2500, 100, 1);
+        } else {
+            // generate a random number between 0 and 2^16 with mean of 0 and std dev of 1
+            random_number = generate_random_number(8500, 100, 1);
+        }
+        fprintf(fprnd,"%d\n",random_number);
         printf("random number %d\n",0xFFff&random_number);
         chain_data[3] = 0xFFFF&(random_number);
         configure_chain_dsp(chain_data, 4, 16, 1000);
@@ -241,6 +256,7 @@ int main(int argc, char **argv)
 
     //close file
     fclose(fp);
+    fclose(fprnd);
     cleanup_rx();
     printf("SHUTTING DOWN, wait for thread\n");
     pthread_join(read_from_fifo_thread, NULL);

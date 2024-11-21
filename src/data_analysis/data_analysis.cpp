@@ -16,7 +16,8 @@
 
 #define SOF "aaaaaa"
 #define HEADER "0xaa"
-#define MEMORY_WORD_LENGTH 8
+#define SUBTRACT_HEADER 8+2+2+2
+#define MEMORY_WORD_LENGTH 6
 
 // yaml parser that reads config.yaml file
 
@@ -66,7 +67,8 @@ std::vector<int> extract_memory_words(const std::string &filename, int packet_nu
         if (found) {
             line_counter++;
             if(line_counter == packet_number) {
-            std::string memory_word = line.substr(12, MEMORY_WORD_LENGTH-2);
+            std::string memory_word = line.substr(SUBTRACT_HEADER, MEMORY_WORD_LENGTH-2);
+            std::cout << "Memory word: " << memory_word << std::endl;
             memory_words.push_back(std::stoi(memory_word, nullptr, 16));
             found = false;
             }
