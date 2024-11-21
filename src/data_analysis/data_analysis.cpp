@@ -12,10 +12,26 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+//#include <yaml-cpp/yaml.h>
 
-#define SOF "aa0aaaaa"
+#define SOF "aaaaaa"
 #define HEADER "0xaa"
 #define MEMORY_WORD_LENGTH 8
+
+// yaml parser that reads config.yaml file
+
+// struct Config {
+//     int sof;
+//     int eof;
+// } cfg;
+
+// Config read_config(const std::string &config_file) {
+//     YAML::Node config = YAML::LoadFile(config_file);
+//     Config cfg;
+//     cfg.sof = config["sof"].as<int>();
+//     cfg.eof = config["eof"].as<int>();
+//     return cfg;
+// }
 
  /**
  * @brief Extracts memory words from a file based on a specific packet number.
@@ -29,6 +45,7 @@
  */
 
 std::vector<int> extract_memory_words(const std::string &filename, int packet_number) {
+    // Read the configuration from the config.yaml file
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error opening file" << std::endl;
@@ -77,6 +94,9 @@ int main(int argc, char *argv[]) {
     std::string filename = argv[1];
     int packet_number = std::stoi(argv[2]);
     std::string output_name = argv[3];
+
+    //cfg = read_config("config.yaml");
+
     std::vector<int> memory_words = extract_memory_words(filename, packet_number);
     if (memory_words.empty()) {
         std::cerr << "Error extracting memory words" << std::endl;
