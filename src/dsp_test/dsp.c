@@ -230,10 +230,10 @@ int main(int argc, char **argv)
         // generate a uniform random between 0 and 1
         double u = (double)rand() / RAND_MAX;
         if (u < 0.7) {
-            // generate a random number between 0 and 2^16 with mean of 0 and std dev of 1
+            // generate a random number between 0 and 2^16 with mean of 0 and std of 1
             random_number = generate_random_number(2500, 100, 1);
         } else {
-            // generate a random number between 0 and 2^16 with mean of 0 and std dev of 1
+            // generate a random number between 0 and 2^16 with mean of 0 and std of 1
             random_number = generate_random_number(8500, 100, 1);
         }
         fprintf(fprnd,"%d\n",random_number);
