@@ -353,11 +353,6 @@ void frame_process(char* packets, int size){
     int num_packets = size / 4;
     int packet_index = 0;
     int correct = 0;
-    //alpha shoud start from 1/10 and go to alpha max (1/100000) based on number of times this function is executed (queue processed)
-    float alpha = (1/(10*queue_processed));
-    queue_processed++;
-    if (alpha < alpha_max)
-        alpha = alpha_max;
 
     while (packet_index < num_packets) {
         int packet = 0;
@@ -371,6 +366,7 @@ void frame_process(char* packets, int size){
                 break;
             }
             packet = __builtin_bswap32(*(int*)&packets[4*packet_index + 4*(DSP_FRAME_SIZE-1)]) & 0x00FFFFFF;
+            printf("Packet[%d]: %08x\n", DSP_FRAME_SIZE-1, packet);
             if (packet == 0x00AAFFFF) {
                 //printf("End of Frame detected\n");
                 correct = 1;
