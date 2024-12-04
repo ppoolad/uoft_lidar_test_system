@@ -229,15 +229,18 @@ int main(int argc, char **argv)
         int random_number;
         // generate a uniform random between 0 and 1
         double u = (double)rand() / RAND_MAX;
-        if (u < 0.7) {
+        if (u < 0.5) {
             // generate a random number between 0 and 2^16 with mean of 0 and std of 1
-            random_number = generate_random_number(2500, 100, 1);
+            if (u < 0.20)
+                random_number = generate_random_number(8500, 100, 1);
+            else
+                random_number = generate_random_number(2500, 100, 1);
         } else {
             // generate a random number between 0 and 2^16 with mean of 0 and std of 1
-            random_number = generate_random_number(8500, 100, 1);
+            random_number = (int)(u*MAX_VALUE);
         }
         fprintf(fprnd,"%d\n",random_number);
-        printf("random number %d\n",0xFFff&random_number);
+        printf("random number %d\n",0xFFFF&random_number);
         chain_data[3] = 0xFFFF&(random_number);
         configure_chain_dsp(chain_data, 4, 16, 1000);
         // just give it a random number and wait for it to converge
