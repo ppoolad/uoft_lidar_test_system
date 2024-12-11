@@ -155,13 +155,27 @@ int main(int argc, char** argv) {
         int random_number;
         // generate a uniform random between 0 and 1
         double u = (double)rand() / RAND_MAX;
-        if (u < 0.7) {
-            // generate a random number between 0 and 2^16 with mean of 0 and std of 1
-            random_number = generate_random_number(2500, 100, 1);
+ 
+        if(u < config.snr) {
+            // which kernel it is
+            int kernel_share[NUM_KERNELS];
+            //kernel_share[0] = (1 - config.snr)*config.kernel_weights[0]; do we care?
+            kernel_share[1] = (1 - config.snr)*config.kernel_weights[1];
+            kernel_share[2] = (1 - config.snr)*config.kernel_weights[2];
+            kernel_share[3] = (1 - config.snr)*config.kernel_weights[3];
+            if(u > kernel_share[3] + kernel_share[2] + kernel_share[1]) { //kernel 0
+                random_number = generate_random_number(config.kernel_means[0], config.kernel_std_devs[0]);
+            } else if(u > kernel_share[3] + kernel_share[2]) { //kernel 1
+                random_number = generate_random_number(config.kernel_means[1], config.kernel_std_devs[1]);
+            } else if(u > kernel_share[3]) { //kernel 2
+                random_number = generate_random_number(config.kernel_means[2], config.kernel_std_devs[2]);
+            } else { //kernel 3
+                random_number = generate_random_number(config.kernel_means[3], config.kernel_std_devs[3]);
+            }
         } else {
-            // generate a random number between 0 and 2^16 with mean of 0 and std of 1
-            random_number = generate_random_number(8500, 100, 1);
+            random_number = rand(); // its a uniform noise
         }
+        
         fprintf(fprnd, "%d\n", random_number);
         printf("random number %d\n", 0xFFff & random_number);
         chain_data[3] = 0xFFFF & (random_number);
@@ -194,50 +208,6 @@ int main(int argc, char** argv) {
 
 }
 
-// reads config.text and sets the global configuration struct
-Config parse_config(std::string filename) {
-    
-    Config config;
-
-    // Open the file
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: could not open file " << filename << std::endl;
-        return;
-    }
-
-    // Read the file line by line
-    std::string line;
-    while (std::getline(file, line)) {
-        // Split the line into key and value
-        std::string key, value;
-        std::istringstream iss(line);
-        if (std::getline(iss, key, '=') && std::getline(iss, value)) {
-            // Remove leading and trailing whitespaces
-            key.erase(0, key.find_first_not_of(" \t"));
-            // Set the configuration
-            if (key == "hpc1_chip_name") {
-                config.hpc1_chip_name = value;
-            } else if (key == "led_chip_name") {
-                config.led_chip_name = value;
-            } else if (key == "output_file") {
-                config.output_file = value;
-            } else if (key == "rx_dev_fifo") {
-                config.rx_dev_fifo = value;
-            } else if (key == "nbits_rx") {
-                config.nbits_rx = std::stoi(value);
-            } else if (key == "runtime"){
-                config.runtime = std::stoi(value);
-            } else {
-                std::cerr << "Error: unknown key " << key << std::endl;
-            }
-        }
-    }
-
-    // Close the file
-    file.close();
-    return config;
-}
 
 static void display_help(char * progName)
 {
