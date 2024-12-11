@@ -141,18 +141,18 @@ int configure_chain_dsp(int* data, int num_words, int num_bits, int time_out) {
     reg[0] = 0x05; // load the data
     //sleep for a tiny bit
     
-    usleep(1);
+    //usleep(1);
     //printf("Start configuration\n");
     reg[0] = 0x06; // start the configuration
     
     // Read data from register 7
     unsigned int status_read = 0;
     int time_out_ctr = 0;
-    while (status_read != 1 && time_out_ctr < time_out) {
-        status_read = reg[7];
-        usleep(1);
-        time_out_ctr++;
-    }
+    // while (status_read != 1 && time_out_ctr < time_out) {
+    //     status_read = reg[7];
+    //     //usleep(1);
+    //     time_out_ctr++;
+    // }
     //printf("Read 0x%08x from register 7\n", status_read);
 
     // Clean up

@@ -52,7 +52,9 @@
 #define DEBUG_PRINT(fmt, args...) printf("DEBUG %s:%d(): " fmt, \
         __func__, __LINE__, ##args)
 
-#define DEBUG 0
+#ifndef DEBUG 
+    #define DEBUG 1
+#endif
 struct thread_data {
     int rc;
 };
@@ -85,12 +87,12 @@ int queue_processed = 0;
 char rx_values[MAX_BUF_SIZE_BYTES+16] = {0};
 //file handle to save the values
 FILE *fp;
-
+FILE *fprnd;
 //led values indicating running
 int led_values[8] = {0,0,0,0,0,0,0,1};
 //shift 8 bit array;
 
-int runtime = 120; //run for n secs
+int runtime = 20; //run for n secs
 void shift_array(int *array, int size, int insert){
     //int temp = array[size-1];
     for (int i = size-1; i > 0; i--)
@@ -104,10 +106,9 @@ void shift_array(int *array, int size, int insert){
 
 //generate random number between 0 to 2^16 with mean of n and std of s
 static int rand_initiated = 0;
-int generate_random_number(double mean, double std_dev) {
-
+int generate_random_number(double mean, double std_dev, int seed) {
     if (!rand_initiated) {
-        srand(time(NULL));
+        srand(seed);
         rand_initiated = 1;
     }
 
@@ -204,6 +205,11 @@ int main(int argc, char **argv)
         perror("Failed to open file");
         return -1;
     }
+    fprnd = fopen("random_values.txt","w");
+    if (fprnd == NULL) {
+        perror("Failed to open file");
+        return -1;
+    }
     /* start thread listening for fifo receive packets */
     rc = pthread_create(&read_from_fifo_thread, NULL, read_from_fifo_thread_fn,
             (void *)NULL);
@@ -218,10 +224,21 @@ int main(int argc, char **argv)
     // start the clock
     clock_t start = clock();
     int chain_data[4] = {0,0,0,0};
-    while (running || (clock() - start) < runtime * CLOCKS_PER_SEC) {
+    while (running && (int)(clock() - start)/CLOCKS_PER_SEC < runtime) {
         //send random number to DSP
-        int random_number = generate_random_number(1000, 10);
-        chain_data[3] = 0xFF&random_number;
+        int random_number;
+        // generate a uniform random between 0 and 1
+        double u = (double)rand() / RAND_MAX;
+        if (u < 0.7) {
+            // generate a random number between 0 and 2^16 with mean of 0 and std of 1
+            random_number = generate_random_number(2500, 100, 1);
+        } else {
+            // generate a random number between 0 and 2^16 with mean of 0 and std of 1
+            random_number = generate_random_number(8500, 100, 1);
+        }
+        fprintf(fprnd,"%d\n",random_number);
+        printf("random number %d\n",0xFFff&random_number);
+        chain_data[3] = 0xFFFF&(random_number);
         configure_chain_dsp(chain_data, 4, 16, 1000);
         // just give it a random number and wait for it to converge
     }
@@ -239,6 +256,7 @@ int main(int argc, char **argv)
 
     //close file
     fclose(fp);
+    fclose(fprnd);
     cleanup_rx();
     printf("SHUTTING DOWN, wait for thread\n");
     pthread_join(read_from_fifo_thread, NULL);
@@ -292,12 +310,13 @@ static void *read_from_fifo_thread_fn(void *data)
                     for(int nbytes = 0; nbytes < 4; nbytes++){
                         if(DEBUG){
                             if(nbytes == 0)
-                                printf("0x%02x",buf[memidx*4+3-nbytes]);
+                                printf("0x%02x",0);
                             else
                                 printf("%02x",buf[memidx*4+3-nbytes]);
                         }
-
-                    rx_values[packets_rx] = buf[memidx*4+3-nbytes];
+                    //dsp data packet is 24 bits
+                    if (nbytes > 0)
+                        rx_values[packets_rx] = buf[memidx*4+3-nbytes];
                     packets_rx = packets_rx + 1;
                     }
                     //read and print 4 bytes in little endian
@@ -309,7 +328,7 @@ static void *read_from_fifo_thread_fn(void *data)
         if(DEBUG)
             DEBUG_PRINT("%d packets read\n\r", packets_rx-4);
         //write to file
-        frame_process(rx_values,packets_rx-4);
+        //frame_process(rx_values,packets_rx-4);
         fwrite(rx_values,sizeof(char),packets_rx-4,fp);
         packets_rx = 0;
         rx_occupancy = 0;
@@ -322,7 +341,8 @@ static void *read_from_fifo_thread_fn(void *data)
     return (void *)0;
 }
 
-
+// this needs to be updated for the new data format
+#define DSP_FRAME_SIZE 18
 void frame_process(char* packets, int size){
     //process the packets
     if (size % 4 != 0) {
@@ -341,24 +361,24 @@ void frame_process(char* packets, int size){
 
     while (packet_index < num_packets) {
         int packet = 0;
-        packet = __builtin_bswap32(*(int*)&packets[4*packet_index]);
+        packet = __builtin_bswap32(*(int*)&packets[4*packet_index])&0x00FFFFFF;
         // Check for Start of Frame (SOF) and End of Frame (EOF)
-        if (packet == 0xAA0AAAAA) {
+        if (packet == 0x00AAAAAA) {
             //printf("Start of Frame detected\n");
             // Check for End of Frame (EOF)
-            if (4*packet_index + 4*7 >= num_packets) {
+            if (4*packet_index + 4*(DSP_FRAME_SIZE-1) >= num_packets) {
                 //printf("Invalid packet size\n");
                 break;
             }
-            packet = __builtin_bswap32(*(int*)&packets[4*packet_index + 4*7]);
-            if (packet == 0xAAFFFFFF) {
+            packet = __builtin_bswap32(*(int*)&packets[4*packet_index + 4*(DSP_FRAME_SIZE-1)]) & 0x00FFFFFF;
+            if (packet == 0x00AAFFFF) {
                 //printf("End of Frame detected\n");
                 correct = 1;
                 packet_index++;
                 //continue;
             } else {
                 // Skip to next packet
-                printf("Invalid End of Frame\n");
+                printf("Invalid End of Frame: %08x\n", packet);
                 packet_index++;
                 correct = 0;
                 continue;
@@ -371,16 +391,16 @@ void frame_process(char* packets, int size){
         // if we are here, we have a valid frame
         // Check header
         //correct =
-        for (int i = 0; i < 6; i++) {
-            packet = (__builtin_bswap32(*(int*)&packets[4*packet_index + 4*i]));
+        for (int i = 0; i < 4; i++) {
+            packet = (__builtin_bswap32(*(int*)&packets[4*packet_index + 4*i]))&0x00FFFFFF;
             //printf("channel: %d, Packet: 0x%08X\n", i, packet);
             // Calculate rolling average
-            rolling_avg[i] =  rolling_avg[i] + ((alpha) * ((float)(packet & 0x00FFFFFF) - rolling_avg[i]));
+            rolling_avg[i] =  rolling_avg[i] + ((alpha) * ((float)(packet & 0x0000FFFF) - rolling_avg[i]));
             rolling_avg[i] = rolling_avg[i];
             //rolling_avg[i] = rolling_sum[i] / alpha;
             //printf("channel: %d, Rolling Average: %3f\n", i, rolling_avg[i]);
         }
-        packet_index += 7;
+        packet_index += DSP_FRAME_SIZE;
         correct = 0;
         //printf("Packet: 0x%08X, Rolling Average: %d\n", packet, rolling_avg);
     }
@@ -388,6 +408,7 @@ void frame_process(char* packets, int size){
     printf("\rCH0: %3f, CH1: %3f, CH2: %3f, CH3: %3f, CH4: %3f, CH5: %3f", rolling_avg[0], rolling_avg[1], rolling_avg[2], rolling_avg[3], rolling_avg[4], rolling_avg[5]);
 
 }
+
 static void signal_handler(int signal)
 {
     switch (signal) {
