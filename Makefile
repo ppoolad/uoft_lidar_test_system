@@ -2,7 +2,7 @@
 CC = gcc
 CXX = g++
 LDFLAGS = -lgpiod -lm -lpthread
-LDFLAGSPP = -lm -lpthread
+LDFLAGSPP = -lgpiod -lm -lpthread 
 
 # Directories
 SRC_DIR = src
@@ -31,6 +31,7 @@ DATA_COLLECTOR_SRCS = $(DATA_COLLECTOR_DIR)/tdc_test.c
 TDC_START_SRC = $(DATA_COLLECTOR_DIR)/tdc_start.c
 DSP_TEST_SRCS = $(DSP_DIR)/dsp.c
 DATA_ANALYSIS_SRCS = $(wildcard $(DATA_ANALYSIS_DIR)/*.cpp)
+DSP_CPP_SRCS = $(wildcard $(DSP_DIR)/*.cpp)
 
 # Object files
 ASIC_CONTROL_OBJS = $(patsubst $(ASIC_CONTROL_DIR)/%.c, $(DEBUG_DIR)/%.o, $(ASIC_CONTROL_SRCS))
@@ -40,6 +41,7 @@ DATA_COLLECTOR_OBJS = $(patsubst $(DATA_COLLECTOR_DIR)/%.c, $(DEBUG_DIR)/%.o, $(
 TDC_START_OBJ = $(patsubst $(DATA_COLLECTOR_DIR)/%.c, $(DEBUG_DIR)/%.o, $(TDC_START_SRC)) $(ASIC_CONTROL_OBJS) $(SIMPLE_RX_OBJ) $(CONF_OBJ)
 DSP_TEST_OBJS = $(patsubst %.c, $(DEBUG_DIR)/%.o, $(notdir $(DSP_TEST_SRCS))) $(ASIC_CONTROL_OBJS) $(SIMPLE_RX_OBJ) $(CONF_OBJ)
 DATA_ANALYSIS_OBJS = $(patsubst $(DATA_ANALYSIS_DIR)/%.cpp, $(DEBUG_DIR)/%.o, $(DATA_ANALYSIS_SRCS))
+DSP_CPP_OBJS = $(patsubst $(DSP_DIR)/%.cpp, $(DEBUG_DIR)/%.o, $(DSP_CPP_SRCS)) $(ASIC_CONTROL_OBJS) $(SIMPLE_RX_OBJ) $(CONF_OBJ)
 
 # Shared Object files
 ASIC_CONTROL_SOBJS = $(patsubst $(ASIC_CONTROL_DIR)/%.c, $(DEBUG_DIR)/%.so, $(ASIC_CONTROL_SRCS))
@@ -48,9 +50,10 @@ CONF_SOBJ = $(patsubst $(CONF_DIR)/%.c, $(DEBUG_DIR)/%.so, $(CONF_SRCS))
 DATA_COLLECTOR_SOBJS = $(patsubst $(DATA_COLLECTOR_DIR)/%.c, $(DEBUG_DIR)/%.so, $(DATA_COLLECTOR_SRCS)) $(ASIC_CONTROL_SOBJS) $(SIMPLE_RX_SOBJ) $(CONF_SOBJ)
 TDC_START_SOBJ = $(patsubst $(DATA_COLLECTOR_DIR)/%.c, $(DEBUG_DIR)/%.so, $(TDC_START_SRC)) $(ASIC_CONTROL_SOBJS) $(SIMPLE_RX_SOBJ) $(CONF_SOBJ)
 DATA_ANALYSIS_SOBJS = $(patsubst $(DATA_ANALYSIS_DIR)/%.cpp, $(DEBUG_DIR)/%.so, $(DATA_ANALYSIS_SRCS))
+DSP_CPP_SOBJS = $(patsubst $(DSP_DIR)/%.cpp, $(DEBUG_DIR)/%.so, $(DSP_CPP_SRCS)) $(ASIC_CONTROL_SOBJS) $(SIMPLE_RX_SOBJ) $(CONF_SOBJ)
 
 # Targets
-TARGETS = $(DEBUG_DIR)/tdc_test $(DEBUG_DIR)/tdc_start $(DEBUG_DIR)/data_analysis $(DEBUG_DIR)/dsp
+TARGETS = $(DEBUG_DIR)/tdc_test $(DEBUG_DIR)/tdc_start $(DEBUG_DIR)/data_analysis $(DEBUG_DIR)/dsp $(DEBUG_DIR)/dsp_cpp
 
 # Rules
 all: debug release shared
@@ -63,7 +66,7 @@ release: CFLAGS += -O2
 release: CXXFLAGS += -O2
 release: $(patsubst $(DEBUG_DIR)/%, $(RELEASE_DIR)/%, $(TARGETS))
 
-shared: $(SHARED_DIR)/tdc_test.so $(SHARED_DIR)/tdc_start.so $(SHARED_DIR)/data_analysis.so $(SHARED_DIR)/simple_rx.so $(SHARED_DIR)/asic_control.so $(SHARED_DIR)/conf.so $(SHARED_DIR)/dsp.so
+shared: $(SHARED_DIR)/tdc_test.so $(SHARED_DIR)/tdc_start.so $(SHARED_DIR)/data_analysis.so $(SHARED_DIR)/simple_rx.so $(SHARED_DIR)/asic_control.so $(SHARED_DIR)/conf.so $(SHARED_DIR)/dsp.so $(SHARED_DIR)/dsp_cpp.so
 
 pp: $(DEBUG_DIR)/data_analysis
 
@@ -95,6 +98,10 @@ $(DEBUG_DIR)/%.o: $(DSP_DIR)/%.c
 	@mkdir -p $(DEBUG_DIR)
 	$(CC) $(CFLAGS) -fPIC  -c $< -o $@
 
+$(DEBUG_DIR)/%.o: $(DSP_DIR)/%.cpp
+	@mkdir -p $(DEBUG_DIR)
+	$(CXX) $(CXXFLAGS) -fPIC  -c $< -o $@
+
 # create also so files
 $(SHARED_DIR)/%.so: $(DEBUG_DIR)/%.o
 	@mkdir -p $(SHARED_DIR)
@@ -112,6 +119,9 @@ $(DEBUG_DIR)/data_analysis: $(DATA_ANALYSIS_OBJS)
 
 $(DEBUG_DIR)/dsp: $(DSP_TEST_OBJS)
 	$(CC) $(CFLAGS) $(DSP_TEST_OBJS) -o $@ $(LDFLAGS)
+
+$(DEBUG_DIR)/dsp_cpp: $(DSP_CPP_OBJS)
+	$(CXX) $(CXXFLAGS) $(DSP_CPP_OBJS) -o $@ $(LDFLAGSPP)
 
 $(RELEASE_DIR)/%: $(DEBUG_DIR)/%
 	@mkdir -p $(RELEASE_DIR)
