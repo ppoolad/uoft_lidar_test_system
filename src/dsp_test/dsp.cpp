@@ -9,8 +9,12 @@
 #include <fstream>
 #include <cmath>
 #include <string>
+#include <format>
 #include <sstream>
 #include <gpiod.h>
+#include <chrono>
+#include <vector>
+#include <thread>
 
 #include "dsp.hpp"
 #include "configs.h"
@@ -26,12 +30,16 @@ struct gpiod_line_bulk leds;
 std::string config_file = "config.txt";
 std::string output_file = "dsp_values.txt";
 
+std::ofstream output_file;
+
+//global output vector
+std::vector<int> rx_values;
 //led values indicating running
 int led_values[8] = {0,0,0,0,0,0,0,1};
 
 Config parse_config(std::string filename);
 static void signal_handler(int signal);
-static void *read_from_fifo_thread_fn(void *data);
+static void read_from_fifo_thread_fn(std::ofstream& fp);
 static void display_help(char * progName);
 static void quit(void);
 void frame_process(char* packets, int size);
@@ -127,19 +135,21 @@ int main(int argc, char** argv) {
     std::cout << "setting leds to 0x55" << std::endl;
     set_gpio_array(chipled, &leds, led_values);
 
-    // open files to save output
-    FILE* fp = fopen(output_file.c_str(), "w");
+    std::ofstream fp(output_file, std::ios::out | std::ios::trunc);
     if(!fp) {
         perror("Failed to open output file");
         return -1;
     }
 
     //record random input values
-    FILE* fprnd = fopen("random_values.txt", "w");
+    //FILE* fprnd = fopen("random_values.txt", "w");
+    std::ofstream fprnd("random_values.txt", std::ios::out | std::ios::trunc);
     
     // start a thread than listens to rx fifo
-    pthread_t read_from_fifo_thread;
-    pthread_create(&read_from_fifo_thread, NULL, read_from_fifo_thread_fn, NULL);
+    //pthread_t read_from_fifo_thread;
+    std::thread read_from_fifo_thread(read_from_fifo_thread_fn, fp);
+
+    //pthread_create(&read_from_fifo_thread, NULL, read_from_fifo_thread_fn, NULL);
 
     // Enable the RX core
     set_rx_nbits(config.nbits_rx); // 16 data + 8 header
@@ -147,10 +157,12 @@ int main(int argc, char** argv) {
     dsp_serializer(1, chip);
 
     // start the clock
-    clock_t start = clock();
+    auto start = std::chrono::high_resolution_clock::now();
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     int chain_data[4] = {0, 0, 0, 0};
     int runtime = config.runtime;
-    while (running && (int)(clock() - start)/CLOCKS_PER_SEC < runtime) {
+    while (running && duration < runtime) {
         // send random number to DSP
         int random_number;
         // generate a uniform random between 0 and 1
@@ -176,10 +188,17 @@ int main(int argc, char** argv) {
             random_number = rand(); // its a uniform noise
         }
         
-        fprintf(fprnd, "%d\n", random_number);
-        printf("random number %d\n", 0xFFff & random_number);
+        //record random number
+        fprnd << random_number << std::endl;
+        std::cout << "random number " << 0xFFFF & random_number << std::endl;
+
+        //prepare for device
         chain_data[3] = 0xFFFF & (random_number);
         configure_chain_dsp(chain_data, 4, 16, 1000);
+
+        // update time
+        stop = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     }
 
     // Quit
@@ -192,18 +211,18 @@ int main(int argc, char** argv) {
     gpio_chip_close(chipled);
 
     // close files
-    fclose(fp);
-    fclose(fprnd);
+    fp.close();
+    fprnd.close();
 
     //cleanup rx device
     cleanup_rx();
 
     //close threads
     std::cout << "SHUTTING DOWN, wait for thread" << std::endl;
-    pthread_join(read_from_fifo_thread, NULL);
+    //pthread_join(read_from_fifo_thread, NULL);
+    read_from_fifo_thread.join();
+
     close(readFifoFd);
-    
-    
     return 0;
 
 }
@@ -223,14 +242,13 @@ static void quit(void)
     running = false;
 }
 
-static void *read_from_fifo_thread_fn(void *data)
+static void read_from_fifo_thread_fn(std::ofstream& fp)
 {
     ssize_t bytesFifo;
     int packets_rx;
     uint8_t buf[MAX_BUF_SIZE_BYTES];
     int rx_occupancy = 0;
-    /* shut up compiler */
-    (void)data;
+
 
     packets_rx = 0;
     sleep(1);
@@ -238,11 +256,59 @@ static void *read_from_fifo_thread_fn(void *data)
         //wait for fifo to fill up
         while(rx_occupancy < MAX_BUF_SIZE_BYTES && running){
             ioctl(readFifoFd, AXIS_FIFO_GET_RX_OCCUPANCY, &rx_occupancy);
-            if(DEBUG) DEBUG_PRINT("rx_occupancy %d\n",rx_occupancy);
-            usleep(100);
+            if(DEBUG) std::cout << "rx_occupancy: " << rx_occupancy << std::p(100);
         }
 
-        // stop rx
+        // fifo is full stop RX
         disable_rx();
+
+        // empty fifo
+        while (packets_rx < rx_occupancy)
+        {
+            bytesFifo = read(readFifoFd, buf, MAX_BUF_SIZE_BYTES);
+            if(bytesFifo < 0){
+                std::cerr << "read from fifo error" << std::endl;
+                break;
+            }
+            if (bytesFifo > 0) {
+                if(DEBUG){
+                    std::clog << "bytes from fifo: " << bytesFifo << std::endl;
+                    std::clog << "Read : "<< std::endl;
+                }
+                for (int memidx = 0; memidx < bytesFifo/4; memidx++)
+                {
+                    // for(int nbytes = 0; nbytes < 4; nbytes++){
+                    //     if(DEBUG){
+                    //         if(nbytes == 0)
+                    //             std::cout << std::format("{:02x}", 0);
+                    //         else
+                    //             std::cout << std::format("{:02x}", buf[memidx*4+3-nbytes]);
+                    //     }
+                    // //dsp data packet is 24 bits
+                    // if (nbytes > 0)
+                    //     //rx_values[packets_rx] = buf[memidx*4+3-nbytes];
+                    //     int value;
+                    //     packets_rx++;
+                    // }
+                    // //read and print 4 bytes in little endian
+                    // if(DEBUG)
+                    //     std::cout << std::endl;
+                    int value;
+                    value = std::memcpy(&buf[memidx*4], sizeof(int));
+                    // print as hex to console
+                    std::cout << "0x" << std::format("{:08x}", value) << std::endl;
+                    rx_values.push_back(value&0x00FFFFFF); // first byte is header
+                    // write to file
+                    fp << value << std::endl;
+
+                    packets_rx = packets_rx + 4;
+                }       
+            }
+        }
+        if(DEBUG) std::cout << packets_rx-4 << " packets read" << std::endl;
+        
+        
+        //write to file
+        
 
 }
