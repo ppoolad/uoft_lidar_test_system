@@ -1,10 +1,9 @@
 *.txt
 src/data_analysis/venv
 build
-
+dsp
 gpio
 data_analysis
 tdc_start
 tdc_test
-dsp_test
 *.pdf
