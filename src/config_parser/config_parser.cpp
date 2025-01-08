@@ -18,7 +18,7 @@ Config parse_config(std::string filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error: could not open file " << filename << std::endl;
-        return;
+        return config;
     }
 
     // Read the file line by line
