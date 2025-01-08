@@ -15,6 +15,9 @@
 #include <vector>
 #include <thread>
 
+#include <fcntl.h>
+
+
 #include "dsp.hpp"
 #include "configs.h"
 
@@ -28,8 +31,6 @@ struct gpiod_line_bulk leds;
 
 std::string config_file = "config.txt";
 std::string output_file = "dsp_values.txt";
-
-std::ofstream output_file;
 
 //global output vector
 std::vector<int> rx_values;
@@ -102,7 +103,7 @@ int main(int argc, char** argv) {
     }
 
     // Open fifo
-    int readFifoFd = open(rx_dev_fifo, O_RDONLY | O_NONBLOCK);
+    int readFifoFd = open(config.rx_dev_fifo, O_RDONLY | O_NONBLOCK);
     if (readFifoFd < 0) {
         printf("Open read failed with error: %s\n", strerror(errno));
         return -1;

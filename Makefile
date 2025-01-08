@@ -12,6 +12,7 @@ DSP_DIR = $(SRC_DIR)/dsp_test
 ASIC_CONTROL_DIR = $(SRC_DIR)/asic_control
 SIMPLE_RX_DIR = $(SRC_DIR)/simple_rx
 CONF_DIR = $(SRC_DIR)/conf
+PARSER_DIR = $(SRC_DIR)/config_parser
 INCLUDE_DIR = include
 
 CFLAGS = -I$(INCLUDE_DIR)
@@ -32,6 +33,7 @@ TDC_START_SRC = $(DATA_COLLECTOR_DIR)/tdc_start.c
 DSP_TEST_SRCS = $(DSP_DIR)/dsp.c
 DATA_ANALYSIS_SRCS = $(wildcard $(DATA_ANALYSIS_DIR)/*.cpp)
 DSP_CPP_SRCS = $(wildcard $(DSP_DIR)/*.cpp)
+PARSER_SRCS = $(wildcard $(PARSER_DIR)/*.cpp)
 
 # Object files
 ASIC_CONTROL_OBJS = $(patsubst $(ASIC_CONTROL_DIR)/%.c, $(DEBUG_DIR)/%.o, $(ASIC_CONTROL_SRCS))
@@ -41,8 +43,8 @@ DATA_COLLECTOR_OBJS = $(patsubst $(DATA_COLLECTOR_DIR)/%.c, $(DEBUG_DIR)/%.o, $(
 TDC_START_OBJ = $(patsubst $(DATA_COLLECTOR_DIR)/%.c, $(DEBUG_DIR)/%.o, $(TDC_START_SRC)) $(ASIC_CONTROL_OBJS) $(SIMPLE_RX_OBJ) $(CONF_OBJ)
 DSP_TEST_OBJS = $(patsubst %.c, $(DEBUG_DIR)/%.o, $(notdir $(DSP_TEST_SRCS))) $(ASIC_CONTROL_OBJS) $(SIMPLE_RX_OBJ) $(CONF_OBJ)
 DATA_ANALYSIS_OBJS = $(patsubst $(DATA_ANALYSIS_DIR)/%.cpp, $(DEBUG_DIR)/%.o, $(DATA_ANALYSIS_SRCS))
-DSP_CPP_OBJS = $(patsubst $(DSP_DIR)/%.cpp, $(DEBUG_DIR)/%_cpp.o, $(DSP_CPP_SRCS)) $(ASIC_CONTROL_OBJS) $(SIMPLE_RX_OBJ) $(CONF_OBJ)
-
+PARSER_OBJS = $(patsubst $(PARSER_DIR)/%.cpp, $(DEBUG_DIR)/%.o, $(PARSER_SRCS))
+DSP_CPP_OBJS = $(patsubst $(DSP_DIR)/%.cpp, $(DEBUG_DIR)/%_cpp.o, $(DSP_CPP_SRCS)) $(ASIC_CONTROL_OBJS) $(SIMPLE_RX_OBJ) $(CONF_OBJ) $(PARSER_OBJS)
 # Shared Object files
 ASIC_CONTROL_SOBJS = $(patsubst $(ASIC_CONTROL_DIR)/%.c, $(DEBUG_DIR)/%.so, $(ASIC_CONTROL_SRCS))
 SIMPLE_RX_SOBJ = $(patsubst $(SIMPLE_RX_DIR)/%.c, $(DEBUG_DIR)/%.so, $(SIMPLE_RX_SRCS))
@@ -50,8 +52,8 @@ CONF_SOBJ = $(patsubst $(CONF_DIR)/%.c, $(DEBUG_DIR)/%.so, $(CONF_SRCS))
 DATA_COLLECTOR_SOBJS = $(patsubst $(DATA_COLLECTOR_DIR)/%.c, $(DEBUG_DIR)/%.so, $(DATA_COLLECTOR_SRCS)) $(ASIC_CONTROL_SOBJS) $(SIMPLE_RX_SOBJ) $(CONF_SOBJ)
 TDC_START_SOBJ = $(patsubst $(DATA_COLLECTOR_DIR)/%.c, $(DEBUG_DIR)/%.so, $(TDC_START_SRC)) $(ASIC_CONTROL_SOBJS) $(SIMPLE_RX_SOBJ) $(CONF_SOBJ)
 DATA_ANALYSIS_SOBJS = $(patsubst $(DATA_ANALYSIS_DIR)/%.cpp, $(DEBUG_DIR)/%.so, $(DATA_ANALYSIS_SRCS))
-DSP_CPP_SOBJS = $(patsubst $(DSP_DIR)/%.cpp, $(DEBUG_DIR)/%_cpp.so, $(DSP_CPP_SRCS)) $(ASIC_CONTROL_SOBJS) $(SIMPLE_RX_SOBJ) $(CONF_SOBJ)
-
+PARSER_SOBJS = $(patsubst $(PARSER_DIR)/%.cpp, $(DEBUG_DIR)/%.so, $(PARSER_SRCS)) 
+DSP_CPP_SOBJS = $(patsubst $(DSP_DIR)/%.cpp, $(DEBUG_DIR)/%_cpp.so, $(DSP_CPP_SRCS)) $(ASIC_CONTROL_SOBJS) $(SIMPLE_RX_SOBJ) $(CONF_SOBJ) $(PARSER_SOBJS)
 # Targets
 TARGETS = $(DEBUG_DIR)/tdc_test $(DEBUG_DIR)/tdc_start $(DEBUG_DIR)/data_analysis $(DEBUG_DIR)/dsp $(DEBUG_DIR)/dsp_cpp
 
