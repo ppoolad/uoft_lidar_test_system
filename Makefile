@@ -15,7 +15,7 @@ CONF_DIR = $(SRC_DIR)/conf
 INCLUDE_DIR = include
 
 CFLAGS = -I$(INCLUDE_DIR)
-CXXFLAGS = -I$(INCLUDE_DIR)
+CXXFLAGS = -I$(INCLUDE_DIR) -std=c++20
 
 # Output directories
 BUILD_DIR = build
@@ -98,7 +98,7 @@ $(DEBUG_DIR)/%.o: $(DSP_DIR)/%.c
 	@mkdir -p $(DEBUG_DIR)
 	$(CC) $(CFLAGS) -fPIC  -c $< -o $@
 
-$(DEBUG_DIR)/%.o: $(DSP_DIR)/%.cpp
+$(DEBUG_DIR)/%_cpp.o: $(DSP_DIR)/%.cpp
 	@mkdir -p $(DEBUG_DIR)
 	$(CXX) $(CXXFLAGS) -fPIC  -c $< -o $@
 
