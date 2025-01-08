@@ -9,7 +9,6 @@
 #include <fstream>
 #include <cmath>
 #include <string>
-#include <format>
 #include <sstream>
 #include <gpiod.h>
 #include <chrono>
@@ -296,7 +295,7 @@ static void read_from_fifo_thread_fn(std::ofstream& fp)
                     int value;
                     value = std::memcpy(&buf[memidx*4], sizeof(int));
                     // print as hex to console
-                    std::cout << "0x" << std::format("{:08x}", value) << std::endl;
+                    std::cout << "0x" << std::hex << value << std::endl;
                     rx_values.push_back(value&0x00FFFFFF); // first byte is header
                     // write to file
                     fp << value << std::endl;
