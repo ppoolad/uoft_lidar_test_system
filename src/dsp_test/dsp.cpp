@@ -14,13 +14,24 @@
 #include <chrono>
 #include <vector>
 #include <thread>
+#include <cstring>
+#include <cerrno>
+#include <unistd.h>
 
 #include <fcntl.h>
+#include <sys/ioctl.h>
 
-
-#include "dsp.hpp"
 #include "configs.h"
 
+// these are my C functions
+extern "C" {
+#include "axis-fifo.h"
+#include "asic.h"
+#include "asic_control.h"
+#include "conf.h"
+#include "simple_rx.h"
+}
+#define DEBUG 1
 //globlas
 //gpio stuff
 static volatile bool running = true;
@@ -39,7 +50,7 @@ int led_values[8] = {0,0,0,0,0,0,0,1};
 
 Config parse_config(std::string filename);
 static void signal_handler(int signal);
-static void read_from_fifo_thread_fn(std::ofstream& fp);
+void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd);
 static void display_help(char * progName);
 static void quit(void);
 void frame_process(char* packets, int size);
@@ -103,9 +114,9 @@ int main(int argc, char** argv) {
     }
 
     // Open fifo
-    int readFifoFd = open(config.rx_dev_fifo, O_RDONLY | O_NONBLOCK);
+    int readFifoFd = open(config.rx_dev_fifo.c_str(), O_RDONLY | O_NONBLOCK);
     if (readFifoFd < 0) {
-        printf("Open read failed with error: %s\n", strerror(errno));
+        printf("Open read failed with error: %s\n", std::strerror(errno));
         return -1;
     }
 
@@ -147,7 +158,7 @@ int main(int argc, char** argv) {
     
     // start a thread than listens to rx fifo
     //pthread_t read_from_fifo_thread;
-    std::thread read_from_fifo_thread(read_from_fifo_thread_fn, fp);
+    std::thread read_from_fifo_thread(read_from_fifo_thread_fn, std::ref(fp), readFifoFd);
 
     //pthread_create(&read_from_fifo_thread, NULL, read_from_fifo_thread_fn, NULL);
 
@@ -190,7 +201,7 @@ int main(int argc, char** argv) {
         
         //record random number
         fprnd << random_number << std::endl;
-        std::cout << "random number " << 0xFFFF & random_number << std::endl;
+        std::cout << "random number " << (0xFFFF & random_number) << std::endl;
 
         //prepare for device
         chain_data[3] = 0xFFFF & (random_number);
@@ -207,8 +218,8 @@ int main(int argc, char** argv) {
     std::cout << "turn off serializer" << std::endl;
     dsp_serializer(0, chip);
 
-    gpio_chip_close(chip);
-    gpio_chip_close(chipled);
+    gpiod_chip_close(chip);
+    gpiod_chip_close(chipled);
 
     // close files
     fp.close();
@@ -242,7 +253,7 @@ static void quit(void)
     running = false;
 }
 
-static void read_from_fifo_thread_fn(std::ofstream& fp)
+void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd)
 {
     ssize_t bytesFifo;
     int packets_rx;
@@ -256,7 +267,8 @@ static void read_from_fifo_thread_fn(std::ofstream& fp)
         //wait for fifo to fill up
         while(rx_occupancy < MAX_BUF_SIZE_BYTES && running){
             ioctl(readFifoFd, AXIS_FIFO_GET_RX_OCCUPANCY, &rx_occupancy);
-            if(DEBUG) std::cout << "rx_occupancy: " << rx_occupancy << std::p(100);
+            if(DEBUG) std::cout << "rx_occupancy: " << rx_occupancy << std::endl;
+            sleep(100);
         }
 
         // fifo is full stop RX
@@ -294,7 +306,7 @@ static void read_from_fifo_thread_fn(std::ofstream& fp)
                     // if(DEBUG)
                     //     std::cout << std::endl;
                     int value;
-                    value = std::memcpy(&buf[memidx*4], sizeof(int));
+                    std::memcpy(&value, &buf[memidx*4], 4);
                     // print as hex to console
                     std::cout << "0x" << std::hex << value << std::endl;
                     rx_values.push_back(value&0x00FFFFFF); // first byte is header
@@ -306,9 +318,7 @@ static void read_from_fifo_thread_fn(std::ofstream& fp)
             }
         }
         if(DEBUG) std::cout << packets_rx-4 << " packets read" << std::endl;
-        
-        
-        //write to file
-        
+
+    }
 
 }

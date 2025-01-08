@@ -16,7 +16,7 @@ PARSER_DIR = $(SRC_DIR)/config_parser
 INCLUDE_DIR = include
 
 CFLAGS = -I$(INCLUDE_DIR)
-CXXFLAGS = -I$(INCLUDE_DIR) -std=c++20
+CXXFLAGS = -I$(INCLUDE_DIR) -std=c++17
 
 # Output directories
 BUILD_DIR = build
@@ -99,6 +99,10 @@ $(DEBUG_DIR)/%.o: $(TDC_START_OBJ)/%.c
 $(DEBUG_DIR)/%.o: $(DSP_DIR)/%.c
 	@mkdir -p $(DEBUG_DIR)
 	$(CC) $(CFLAGS) -fPIC  -c $< -o $@
+
+$(DEBUG_DIR)/%.o: $(PARSER_DIR)/%.cpp
+	@mkdir -p $(DEBUG_DIR)
+	$(CXX) $(CXXFLAGS) -fPIC  -c $< -o $@
 
 $(DEBUG_DIR)/%_cpp.o: $(DSP_DIR)/%.cpp
 	@mkdir -p $(DEBUG_DIR)
