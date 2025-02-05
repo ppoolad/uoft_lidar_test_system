@@ -32,34 +32,50 @@ Config parse_config(std::string filename) {
             key.erase(0, key.find_first_not_of(" \t"));
             // Set the configuration
             if (key == "hpc1_chip_name") {
-                config.hpc1_chip_name = value;
+                config.io_dev_config.hpc1_chip_name = value;
+            } else if (key == "num_hpc1") {
+                config.io_dev_config.num_hpc1 = std::stoi(value);
+            } else if (key == "hpc0_chip_name") {
+                config.io_dev_config.hpc0_chip_name = value;
+            } else if (key == "num_hpc0") {
+                config.io_dev_config.num_hpc0 = std::stoi(value);
             } else if (key == "led_chip_name") {
-                config.led_chip_name = value;
+                config.io_dev_config.led_chip_name = value;
+            } else if (key == "num_led") {
+                config.io_dev_config.num_led = std::stoi(value);
+            } else if (key == "pb_chip_name") {
+                config.io_dev_config.pb_chip_name = value;
+            } else if (key == "num_pb") {
+                config.io_dev_config.num_pb = std::stoi(value);
             } else if (key == "output_file") {
                 config.output_file = value;
             } else if (key == "rx_dev_fifo") {
-                config.rx_dev_fifo = value;
+                config.io_dev_config.rx_dev_fifo = value;
             } else if (key == "nbits_rx") {
-                config.nbits_rx = std::stoi(value);
+                config.io_dev_config.nbits_rx = std::stoi(value);
+            } else if (key == "uio_device") {
+                config.io_dev_config.uio_device = value;
             } else if (key == "runtime"){
                 config.runtime = std::stoi(value);
             } else if (key == "snr"){
-                config.snr = std::stof(value);
+                config.dsp_config.snr = std::stof(value);
             } else if (key == "kernel_means") {
                 std::istringstream iss(value);
                 for (int i = 0; i < 4; i++) {
-                    iss >> config.kernel_means[i];
+                    iss >> config.dsp_config.kernel_means[i];
                 }
             } else if (key == "kernel_std_devs") {
                 std::istringstream iss(value);
                 for (int i = 0; i < 4; i++) {
-                    iss >> config.kernel_std_devs[i];
+                    iss >> config.dsp_config.kernel_std_devs[i];
                 }
             } else if (key == "kernel_weights") {
                 std::istringstream iss(value);
                 for (int i = 0; i < 4; i++) {
-                    iss >> config.kernel_weights[i];
+                    iss >> config.dsp_config.kernel_weights[i];
                 }
+            }   else if (key == "dsp_debug_log") {
+                config.dsp_config.debug_log = std::stoi(value);
             }
             
             
