@@ -100,21 +100,21 @@ int main(int argc, char** argv) {
     Config config = parse_config(config_file);
 
     // open hpc1 chip
-    chip = gpiod_chip_open_by_name(config.hpc1_chip_name.c_str());
+    chip = gpiod_chip_open_by_name(config.io_dev_config.hpc1_chip_name.c_str());
     if (!chip) {
         perror("Open HPC1 chip failed");
         exit(EXIT_FAILURE);
     }
 
     // open led chip
-    chipled = gpiod_chip_open_by_name(config.led_chip_name.c_str());
+    chipled = gpiod_chip_open_by_name(config.io_dev_config.led_chip_name.c_str());
     if (!chipled) {
         perror("Open LED chip failed");
         exit(EXIT_FAILURE);
     }
 
     // Open fifo
-    int readFifoFd = open(config.rx_dev_fifo.c_str(), O_RDONLY | O_NONBLOCK);
+    int readFifoFd = open(config.io_dev_config.rx_dev_fifo.c_str(), O_RDONLY | O_NONBLOCK);
     if (readFifoFd < 0) {
         printf("Open read failed with error: %s\n", std::strerror(errno));
         return -1;
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
     //pthread_create(&read_from_fifo_thread, NULL, read_from_fifo_thread_fn, NULL);
 
     // Enable the RX core
-    set_rx_nbits(config.nbits_rx); // 16 data + 8 header
+    set_rx_nbits(config.io_dev_config.nbits_rx); // 16 data + 8 header
     enable_rx();
     dsp_serializer(1, chip);
 
@@ -179,21 +179,21 @@ int main(int argc, char** argv) {
         // generate a uniform random between 0 and 1
         double u = (double)rand() / RAND_MAX;
  
-        if(u < config.snr) {
+        if(u < config.dsp_config.snr) {
             // which kernel it is
             int kernel_share[NUM_KERNELS];
             //kernel_share[0] = (1 - config.snr)*config.kernel_weights[0]; do we care?
-            kernel_share[1] = (1 - config.snr)*config.kernel_weights[1];
-            kernel_share[2] = (1 - config.snr)*config.kernel_weights[2];
-            kernel_share[3] = (1 - config.snr)*config.kernel_weights[3];
+            kernel_share[1] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[1];
+            kernel_share[2] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[2];
+            kernel_share[3] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[3];
             if(u > kernel_share[3] + kernel_share[2] + kernel_share[1]) { //kernel 0
-                random_number = generate_random_number(config.kernel_means[0], config.kernel_std_devs[0]);
+                random_number = generate_random_number(config.dsp_config.kernel_means[0], config.dsp_config.kernel_std_devs[0]);
             } else if(u > kernel_share[3] + kernel_share[2]) { //kernel 1
-                random_number = generate_random_number(config.kernel_means[1], config.kernel_std_devs[1]);
+                random_number = generate_random_number(config.dsp_config.kernel_means[1], config.dsp_config.kernel_std_devs[1]);
             } else if(u > kernel_share[3]) { //kernel 2
-                random_number = generate_random_number(config.kernel_means[2], config.kernel_std_devs[2]);
+                random_number = generate_random_number(config.dsp_config.kernel_means[2], config.dsp_config.kernel_std_devs[2]);
             } else { //kernel 3
-                random_number = generate_random_number(config.kernel_means[3], config.kernel_std_devs[3]);
+                random_number = generate_random_number(config.dsp_config.kernel_means[3], config.dsp_config.kernel_std_devs[3]);
             }
         } else {
             random_number = rand(); // its a uniform noise
