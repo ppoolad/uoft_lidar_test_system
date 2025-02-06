@@ -25,15 +25,24 @@ typedef struct {
     int kernel_means[NUM_KERNELS];
     int kernel_std_devs[NUM_KERNELS];
     float kernel_weights[NUM_KERNELS];
-    int debug_log;
 } DSP_config;
+
+typedef struct {
+    int channel_enables[6] = {0};
+    int channel_offsets[6] = {0};
+    int tdc_chain_num_words;
+    int tdc_chain_num_bits;
+    int tdc_chain_timeout;
+    int tdc_serdes_nbits;
+} TDC_config;
 
 typedef struct {
     IO_dev_config io_dev_config;
     DSP_config dsp_config;
-
+    TDC_config tdc_config;
     std::string output_file;
     int runtime;
+    int debug_log;
 
 } Config;
 
