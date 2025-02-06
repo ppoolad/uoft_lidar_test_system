@@ -27,6 +27,11 @@ Config parse_config(std::string filename) {
         // Split the line into key and value
         std::string key, value;
         std::istringstream iss(line);
+        // skip the like if it is a comment starts with # 
+        if (line[0] == '#' | line[0] == '\n') {
+            continue;
+        }
+
         if (std::getline(iss, key, '=') && std::getline(iss, value)) {
             // Remove leading and trailing whitespaces
             key.erase(0, key.find_first_not_of(" \t"));
@@ -55,7 +60,7 @@ Config parse_config(std::string filename) {
                 config.io_dev_config.nbits_rx = std::stoi(value);
             } else if (key == "uio_device") {
                 config.io_dev_config.uio_device = value;
-            } else if (key == "runtime"){
+            } else if (key == "runtime_ms"){
                 config.runtime = std::stoi(value);
             } else if (key == "snr"){
                 config.dsp_config.snr = std::stof(value);
@@ -74,12 +79,30 @@ Config parse_config(std::string filename) {
                 for (int i = 0; i < 4; i++) {
                     iss >> config.dsp_config.kernel_weights[i];
                 }
-            }   else if (key == "dsp_debug_log") {
-                config.dsp_config.debug_log = std::stoi(value);
-            }
+            } else if (key == "debug_log") {
+                config.debug_log = std::stoi(value);
+            } else if (key == "tdc_channel_enables") {
+                std::istringstream iss(value);
+                for (int i = 0; i < 6; i++) {
+                    iss >> config.tdc_config.channel_enables[i];
+                }
+            } else if (key == "tdc_channel_offsets") {
+                std::istringstream iss(value);
+                for (int i = 0; i < 6; i++) {
+                    iss >> config.tdc_config.channel_offsets[i];
+                }
+            } else if (key == "tdc_chain_num_words") {
+                config.tdc_config.tdc_chain_num_words = std::stoi(value);
+            } else if (key == "tdc_chain_num_bits") {
+                config.tdc_config.tdc_chain_num_bits = std::stoi(value);
+            } else if (key == "tdc_chain_timeout") {
+                config.tdc_config.tdc_chain_timeout = std::stoi(value);
+            // } else if (key == "tdc_serdes_nbits") {
+            //     config.tdc_config.tdc_serdes_nbits = std::stoi(value);
+            // }
             
             
-            else {
+            } else {
                 std::cerr << "Error: unknown key " << key << std::endl;
             }
         }
