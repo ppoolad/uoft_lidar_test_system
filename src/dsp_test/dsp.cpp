@@ -48,7 +48,7 @@ std::vector<int> rx_values;
 //led values indicating running
 int led_values[8] = {0,0,0,0,0,0,0,1};
 
-Config parse_config(std::string filename);
+//Config parse_config(std::string filename);
 static void signal_handler(int signal);
 void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd);
 static void display_help(char * progName);
