@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 
     //create tdc chain
     unsigned int chain_data[4] = {0};
-    int enables[] = {1,0,1,0,1,1};
+    int enables[] = {1,1,1,1,1,1};
     int offsets[] = {0,0,0,0,0};
     create_tdc_chain(enables, offsets, chain_data);
     // configure the chain so only tdc channel 0 is enable
@@ -276,12 +276,12 @@ static void *read_from_fifo_thread_fn(void *data)
                             else
                                 printf("%02x",buf[memidx*4+3-nbytes]);
                         }
-                    // if(DEBUG){
-                    //     if(memidx == 0)
-                    //         printf("0x%02x",buf[bytesFifo-1-memidx]);
-                    //     else
-                    //         printf("%02x",buf[bytesFifo-1-memidx]);
-                    // }
+                    if(1){
+                        if(memidx == 0)
+                            printf("0x%02x",buf[bytesFifo-1-memidx]);
+                        else
+                            printf("%02x",buf[bytesFifo-1-memidx]);
+                    }
                     rx_values[packets_rx] = buf[memidx*4+3-nbytes]; //buf[bytesFifo-1-memidx];
                     packets_rx = packets_rx + 1;
                     }

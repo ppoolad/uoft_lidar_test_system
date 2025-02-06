@@ -7,6 +7,11 @@
 
 // todo: clean up commands somehow
 
+#include <iostream>
+#include <fstream>
+#include <cmath>
+#include <sstream>
+#include <vector>
 #include <cstdlib>
 #include <cstdio>
 #include <cassert>
@@ -42,6 +47,7 @@ extern "C" {
 /* global variables */
 static volatile bool running = false;
 int runtime = 0; //run for n secs
+int debug_log = 0;
 //gpio stuff
 struct gpiod_chip *chip;// = gpiod_chip_open_by_name(HPC1_CHIP_NAME);
 struct gpiod_chip *chipled;// = gpiod_chip_open_by_name(LED_CHIP_NAME);
@@ -59,59 +65,49 @@ std::vector<int> rx_values;
 //led values indicating running
 int led_values[8] = {0,0,0,0,0,0,0,1};
 static void signal_handler(int signal);
-void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd);
+void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd);
 static void display_help(char * progName);
 static void quit(void);
 void frame_process(char* packets, int size);
+//static void print_opts();
 
+// static int process_options(int argc, char * argv[])
+// {
+//         for (;;) {
+//             int option_index = 0;
+//             static const char *short_options = "hrno:t:";
+//             static const struct option long_options[] = {
+//                     {"help", no_argument, 0, 'h'},
+//                     {"devRx", required_argument, 0, 'r'},
+//                     {"nseconds", required_argument, 0, 'n'},
+//                     {"output", required_argument, 0, 'o'},
+//                     {0,0,0,0},
+//                     };
 
-static int process_options(int argc, char * argv[])
-{
-        strcpy(_opt_dev_rx,DEF_DEV_RX);
+//             int c = getopt_long(argc, argv, short_options,
+//             long_options, &option_index);
 
-        for (;;) {
-            int option_index = 0;
-            static const char *short_options = "hrno:t:";
-            static const struct option long_options[] = {
-                    {"help", no_argument, 0, 'h'},
-                    {"devRx", required_argument, 0, 'r'},
-                    {"nseconds", required_argument, 0, 'n'},
-                    {"output", required_argument, 0, 'o'},
-                    {0,0,0,0},
-                    };
+//             if (c == EOF) {
+//             break;
+//             }
 
-            int c = getopt_long(argc, argv, short_options,
-            long_options, &option_index);
+//             switch (c) {
 
-            if (c == EOF) {
-            break;
-            }
+//                 default:
+//                 case 'h':
+//                     display_help(argv[0]);
+//                     exit(0);
+//                     break;
 
-            switch (c) {
+//                 case 'n':
+//                     runtime = atoi(optarg);
+//                     break;
+//                     }
+//             }
 
-                case 'r':
-                    strcpy(_opt_dev_rx, optarg);
-                    break;
-
-                default:
-                case 'h':
-                    display_help(argv[0]);
-                    exit(0);
-                    break;
-
-                case 'n':
-                    runtime = atoi(optarg);
-                    break;
-
-                case 'o':
-                    strcpy(output_file, optarg);
-                    break;
-                    }
-            }
-
-        print_opts();
-        return 0;
-}
+//         print_opts();
+//         return 0;
+// }
 
 static void display_help(char * progName)
 {
@@ -125,13 +121,14 @@ static void display_help(char * progName)
 static void print_opts()
 {
     std::cout << "Options : \n"
-              << "DevRx          : " << _opt_dev_rx << "\n";
+              << "TBD: " << "\n";
 }
 
-int main(int argc, char* argv)
+int main(int argc, char** argv)
 {
-    process_options(argc, argv);
+    //process_options(argc, argv);
     config = parse_config(config_file);
+    debug_log = config.debug_log;
 
     if (config.runtime == 0) {
         std::cerr << "Runtime not set" << std::endl;
@@ -192,7 +189,9 @@ int main(int argc, char* argv)
     tdc_unreset(chip);
 
     // configure tdc channels
-    configure_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
+    int chain_data[4] = {0};
+    create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
+    configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
 
     std::cout << "initialize the TDC" << std::endl;
     tdc_test(chip, &gpios);
@@ -241,7 +240,7 @@ int main(int argc, char* argv)
 }
 
 // read thread
-void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd)
+void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
 {
     ssize_t bytesFifo;
     int packets_rx;
@@ -267,7 +266,7 @@ void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd)
                 break;
             }
             if (bytesFifo > 0) {
-                if (DEBUG) {
+                if (debug_log) {
                     std::cout << "bytes from fifo " << bytesFifo << std::endl;
                     std::cout << "Read : " << std::endl;
                 }
@@ -276,12 +275,12 @@ void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd)
                     std::memcpy(&value, &buf[memidx*4], 4);
                     // skip if the value is not 0xAA0AAAAA
                     if (value != 0xAA0AAAAA) {
-                        if (DEBUG) {
+                        if (debug_log) {
                             std::cout << "skepping 0x" << std::hex << value << std::endl;
                         }
                         continue;
                     }
-                    if (DEBUG) {
+                    if (debug_log) {
                         std::cout << "0x" << std::hex << value << std::endl;
                     }
                     rx_values.push_back(value);
@@ -292,7 +291,7 @@ void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd)
             }
         }
 
-        if (DEBUG) {
+        if (debug_log) {
             std::cout << packets_rx << " packets read" << std::endl;
         }
 
