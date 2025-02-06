@@ -106,9 +106,9 @@ int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     gpio_values[TDC_EN] = 1;		 //enable tdc
     gpio_values[DIGITAL_EN] = 1;		 //enable tdc
     gpio_values[DSP_ARESETN] = 1;
-    gpio_values[COARSE_EN] = 0;		 //enable tdc
+    gpio_values[COARSE_EN] = 1;		 //enable tdc
     gpio_values[TDC_DEBUG_RD_EN] = 1;	 //enable serializer
-    gpio_values[TDC_STOP_DEBUG_MODE] = 1;//set this one to get external signal;
+    gpio_values[TDC_STOP_DEBUG_MODE] = 0;//set this one to get external signal;
     
     set_gpio_array(chip, gpios, gpio_values);
     //printf("waiting....\n");
