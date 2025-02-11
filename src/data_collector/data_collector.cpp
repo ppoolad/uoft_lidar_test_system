@@ -5,8 +5,6 @@
  * Resets TDC and starts recording, stores them into a file
  */
 
-// todo: clean up commands somehow
-
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -22,7 +20,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
-#include <fcntl.h>              // open flags
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -34,7 +32,7 @@
 
 #include "configs.h"
 #include "helpers.h"
-// External C headers
+
 extern "C" {
   #include <gpiod.h>
   #include "axis-fifo.h"
@@ -46,11 +44,10 @@ extern "C" {
 
 /* global variables */
 static volatile bool running = false;
-int runtime = 0; //run for n secs
+int runtime = 0;
 int debug_log = 0;
-//gpio stuff
-struct gpiod_chip *chip;// = gpiod_chip_open_by_name(HPC1_CHIP_NAME);
-struct gpiod_chip *chipled;// = gpiod_chip_open_by_name(LED_CHIP_NAME);
+struct gpiod_chip *chip;
+struct gpiod_chip *chipled;
 struct gpiod_line_bulk gpios;
 struct gpiod_line_bulk leds;
 
@@ -59,62 +56,56 @@ std::string output_file = "tdc_values.txt";
 std::string output_file_forced = "";
 
 Config config;
-
-//global output vector
 std::vector<int> rx_values;
 float rolling_avg[6] = {0.0};
-//led values indicating running
 int led_values[8] = {0,0,0,0,0,0,0,1};
+
 static void signal_handler(int signal);
 void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd);
 static void display_help(char * progName);
 static void quit(void);
 void frame_process(std::vector<int> packets);
-//static void print_opts();
 
 static int process_options(int argc, char * argv[])
 {
-        for (;;) {
-            int option_index = 0;
-            static const char *short_options = "hnco:t:";
-            static const struct option long_options[] = {
-                    {"help", no_argument, 0, 'h'},
-                    {"nseconds", required_argument, 0, 'n'},
-                    {"config", required_argument, 0, 'c'},
-                    {"output", required_argument, 0, 'o'},
-                    {0,0,0,0},
-                    };
+    for (;;) {
+        int option_index = 0;
+        static const char *short_options = "hnco:t:";
+        static const struct option long_options[] = {
+            {"help", no_argument, 0, 'h'},
+            {"nseconds", required_argument, 0, 'n'},
+            {"config", required_argument, 0, 'c'},
+            {"output", required_argument, 0, 'o'},
+            {0,0,0,0},
+        };
 
-            int c = getopt_long(argc, argv, short_options,
-            long_options, &option_index);
-
-            if (c == EOF) {
+        int c = getopt_long(argc, argv, short_options, long_options, &option_index);
+        if (c == EOF) {
             break;
-            }
-
-            switch (c) {
-
-                default:
-                case 'h':
-                    display_help(argv[0]);
-                    exit(0);
-                    break;
-
-                case 'n':
-                    runtime = atoi(optarg);
-                    break;
-                    
-                case 'c':
-                    config_file = std::string(optarg);
-                    break;
-                case 'o':
-                    output_file_forced = std::string(optarg);
-                    break;
-            }
         }
 
-        display_help(argv[0]);
-        return 0;
+        switch (c) {
+            case 'h':
+                display_help(argv[0]);
+                exit(0);
+                break;
+            case 'n':
+                runtime = atoi(optarg);
+                break;
+            case 'c':
+                config_file = std::string(optarg);
+                break;
+            case 'o':
+                output_file_forced = std::string(optarg);
+                break;
+            default:
+                display_help(argv[0]);
+                exit(1);
+        }
+    }
+
+    display_help(argv[0]);
+    return 0;
 }
 
 static void display_help(char * progName)
@@ -127,28 +118,15 @@ static void display_help(char * progName)
               << "  -o, --output   Output file\n";
 }
 
-// static void print_opts()
-// {
-//     std::cout << "Options : \n"
-//               << "TBD: " << "\n";
-// }
-
 int main(int argc, char** argv)
 {
-    //process_options(argc, argv);
-    if (config_file == "") {
+    process_options(argc, argv);
+    if (config_file.empty()) {
         std::cerr << "Config file not set" << std::endl;
         return -1;
     }
     config = parse_config(config_file);
-    if (output_file_forced != "") {
-        output_file = output_file_forced;
-    } else {
-        output_file = config.output_file;
-    }
-
-
-
+    output_file = output_file_forced.empty() ? config.output_file : output_file_forced;
     debug_log = config.debug_log;
 
     if (config.runtime == 0) {
@@ -156,60 +134,48 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    if(runtime == 0) {
-        runtime = config.runtime/1000;
-    }
+    runtime = runtime == 0 ? config.runtime / 1000 : runtime;
 
-    // Listen to ctrl+c and assert
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
     signal(SIGQUIT, signal_handler);
 
-
-    // open hpc1 chip
     chip = gpiod_chip_open_by_name(config.io_dev_config.hpc1_chip_name.c_str());
     if (!chip) {
         perror("Open chip failed");
         exit(EXIT_FAILURE);
-    }   
+    }
 
-    // open led chip
     chipled = gpiod_chip_open_by_name(config.io_dev_config.led_chip_name.c_str());
     if (!chipled) {
         perror("Open chip failed");
         exit(EXIT_FAILURE);
     }
 
-    // open fifo
     int readFifoFd = open(config.io_dev_config.rx_dev_fifo.c_str(), O_RDONLY | O_NONBLOCK);
     if (readFifoFd < 0) {
-        std::cout << "Open read failed with error: " << std::strerror(errno) << std::endl;
+        std::cerr << "Open read failed with error: " << std::strerror(errno) << std::endl;
         return -1;
     }
 
-    int rx_core;
-    rx_core = ioctl(readFifoFd, AXIS_FIFO_RESET_IP);
-    if (rx_core) {
+    if (ioctl(readFifoFd, AXIS_FIFO_RESET_IP) < 0) {
         perror("ioctl");
         return -1;
     }
 
-    rx_core = init_rx();
-    if (rx_core < 0) {
+    if (init_rx() < 0) {
         perror("init_rx");
         return -1;
     }
 
-    // Start TDC
+// Start TDC
     int hpc1_values[40] = {0};
     std::cout << "setting ASIC GPIOs to 0" << std::endl;
     set_gpio_array(chip, &gpios, hpc1_values);
 
-    //reset/unreset dsp
     tdc_reset(chip);
     tdc_unreset(chip);
 
-    // configure tdc channels
     int chain_data[4] = {0};
     create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
     configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
@@ -229,27 +195,20 @@ int main(int argc, char** argv)
     set_rx_nbits(config.io_dev_config.nbits_rx);
     enable_rx();
 
-    //star threads
     std::thread read_from_fifo_thread(read_from_fifo_thread_fn, std::ref(output_fp), readFifoFd);
 
-    // perform noops
+// perform noops
     while (running) {
-        sleep(runtime); //run for n minutes
+        sleep(runtime);
         quit();
     }
 
-    // turn off serializer
-    //tdc_serializer(0, chip);
-    //tdc_reset(chip);
+    gpiod_chip_close(chip);
 
-    gpiod_chip_close(chip); 
-
-    //set leds to all 1
-    int led_values[8] = {1,1,1,1,1,1,1,1};
-    set_gpio_array(chipled, &leds, led_values);
+    int led_values_off[8] = {1,1,1,1,1,1,1,1};
+    set_gpio_array(chipled, &leds, led_values_off);
     gpiod_chip_close(chipled);
 
-    // close file
     output_fp.close();
     cleanup_rx();
     std::cout << "SHUTTING DOWN, wait for thread" << std::endl;
@@ -257,33 +216,28 @@ int main(int argc, char** argv)
     close(readFifoFd);
 
     return 0;
-
 }
 
-// read thread
 void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
 {
     ssize_t bytesFifo;
-    int packets_rx;
+    int packets_rx = 0;
     char buf[MAX_BUF_SIZE_BYTES];
     int rx_occupancy = 0;
 
-    packets_rx = 0;
-    usleep(100); //let the fifo fill up
-    while (running){
+    usleep(100);
+    while (running) {
         while (rx_occupancy < MAX_BUF_SIZE_BYTES && running) {
             ioctl(readFifoFd, AXIS_FIFO_GET_RX_OCCUPANCY, &rx_occupancy);
             usleep(10);
         }
 
-        // hold the fifo
         disable_rx();
 
-        //read all the packets
-        while(packets_rx < rx_occupancy) {
+        while (packets_rx < rx_occupancy) {
             bytesFifo = read(readFifoFd, buf, MAX_BUF_SIZE_BYTES);
             if (bytesFifo < 0) {
-                std::cout << "read error" << std::endl;
+                std::cerr << "read error" << std::endl;
                 break;
             }
             if (bytesFifo > 0) {
@@ -291,13 +245,12 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
                     std::cout << "bytes from fifo " << bytesFifo << std::endl;
                     std::cout << "Read : " << std::endl;
                 }
-                for (int memidx = 0; memidx < bytesFifo/4; memidx++) {
+                for (int memidx = 0; memidx < bytesFifo / 4; memidx++) {
                     int value;
-                    std::memcpy(&value, &buf[memidx*4], 4);
-                    // skip if the value is not 0xAA0AAAAA
+                    std::memcpy(&value, &buf[memidx * 4], 4);
                     if (value != 0xAA0AAAAA) {
                         if (debug_log) {
-                            std::cout << "skepping 0x" << std::hex << value << std::endl;
+                            std::cout << "skipping 0x" << std::hex << value << std::endl;
                         }
                         continue;
                     }
@@ -305,7 +258,6 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
                         std::cout << "0x" << std::hex << value << std::endl;
                     }
                     rx_values.push_back(value);
-
                     output_fp << value << std::endl;
                     packets_rx += 4;
                 }
@@ -313,10 +265,9 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
         }
 
         if (debug_log) {
-            std::cout << packets_rx-4 << " packets read" << std::endl;
+            std::cout << packets_rx - 4 << " packets read" << std::endl;
         }
 
-        // we should process frames here
         frame_process(rx_values);
         packets_rx = 0;
         rx_occupancy = 0;
@@ -324,37 +275,25 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
 }
 
 int queue_processed = 0;
-int alpha_min = 0.000000001;
+const float alpha_min = 0.000000001;
+
 void frame_process(std::vector<int> packets)
 {
-    //process the packets
-    // if (packets.size() % 4 != 0) {
-    //     std::cout << "Invalid packet size" << std::endl;
-    //     return;
-    // }
-
     int num_packets = packets.size();
-    int correct = 0;
-    //alpha shoud start from 1/10 and go to alpha max (1/100000) based on number of times this function is executed (queue processed)
-    float alpha = (1/(10*queue_processed));
+    float alpha = 1.0f / (10 * queue_processed);
     queue_processed++;
-    if (alpha < alpha_min)
+    if (alpha < alpha_min) {
         alpha = alpha_min;
+    }
 
-    //iterate and pop packets from the vector
-    for (;;){
-        if (packets.empty()) {
-            break;
-        }
+    while (!packets.empty()) {
         int packet = packets.back();
         packets.pop_back();
         std::cout << "Packet: 0x" << std::hex << packet << std::endl;
-        // we are reading in reverse order
+// we are reading in reverse order
         if (packet != 0xAAFFFFFF) {
             continue;
         }
-        //int packet_integrity = 0;
-        // if the 7th packet before this is not 0xAA0AAAAA, then we have a corrupted frame
         if (packets.size() < 7) {
             continue;
         }
@@ -363,35 +302,20 @@ void frame_process(std::vector<int> packets)
             continue;
         }
 
-        // if we are here, we have a valid frame
-        // Check header
-        // 7 packets before that is the header
         for (int i = 0; i < 6; i++) {
             int tof = packets.back();
             packets.pop_back();
-            //std::cout << "channel: " << i << ", Packet: 0x" << std::hex << packet << std::endl;
-            // Calculate rolling average
-            rolling_avg[5-i] =  (1-alpha) * rolling_avg[5-i] + (alpha) * ((float)(tof & 0x00FFFFFF));
-            rolling_avg[5-i] = rolling_avg[5-i];
-            //rolling_avg[i] = rolling_sum[i] / alpha;
+            rolling_avg[5 - i] = (1 - alpha) * rolling_avg[5 - i] + alpha * (tof & 0x00FFFFFF);
         }
 
-        int header = packets.back();
         packets.pop_back();
     }
 }
 
 static void signal_handler(int signal)
 {
-    switch (signal) {
-        case SIGINT:
-        case SIGTERM:
-        case SIGQUIT:
-            running = false;
-            break;
-
-        default:
-            break;
+    if (signal == SIGINT || signal == SIGTERM || signal == SIGQUIT) {
+        running = false;
     }
 }
 
