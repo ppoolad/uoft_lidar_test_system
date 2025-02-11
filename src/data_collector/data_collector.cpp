@@ -54,8 +54,9 @@ struct gpiod_chip *chipled;// = gpiod_chip_open_by_name(LED_CHIP_NAME);
 struct gpiod_line_bulk gpios;
 struct gpiod_line_bulk leds;
 
-std::string config_file = "config.txt";
+std::string config_file = "";
 std::string output_file = "tdc_values.txt";
+std::string output_file_forced = "";
 
 Config config;
 
@@ -71,63 +72,83 @@ static void quit(void);
 void frame_process(char* packets, int size);
 //static void print_opts();
 
-// static int process_options(int argc, char * argv[])
-// {
-//         for (;;) {
-//             int option_index = 0;
-//             static const char *short_options = "hrno:t:";
-//             static const struct option long_options[] = {
-//                     {"help", no_argument, 0, 'h'},
-//                     {"devRx", required_argument, 0, 'r'},
-//                     {"nseconds", required_argument, 0, 'n'},
-//                     {"output", required_argument, 0, 'o'},
-//                     {0,0,0,0},
-//                     };
+static int process_options(int argc, char * argv[])
+{
+        for (;;) {
+            int option_index = 0;
+            static const char *short_options = "hnco:t:";
+            static const struct option long_options[] = {
+                    {"help", no_argument, 0, 'h'},
+                    {"nseconds", required_argument, 0, 'n'},
+                    {"config", required_argument, 0, 'c'},
+                    {"output", required_argument, 0, 'o'},
+                    {0,0,0,0},
+                    };
 
-//             int c = getopt_long(argc, argv, short_options,
-//             long_options, &option_index);
+            int c = getopt_long(argc, argv, short_options,
+            long_options, &option_index);
 
-//             if (c == EOF) {
-//             break;
-//             }
+            if (c == EOF) {
+            break;
+            }
 
-//             switch (c) {
+            switch (c) {
 
-//                 default:
-//                 case 'h':
-//                     display_help(argv[0]);
-//                     exit(0);
-//                     break;
+                default:
+                case 'h':
+                    display_help(argv[0]);
+                    exit(0);
+                    break;
 
-//                 case 'n':
-//                     runtime = atoi(optarg);
-//                     break;
-//                     }
-//             }
+                case 'n':
+                    runtime = atoi(optarg);
+                    break;
+                    
+                case 'c':
+                    config_file = std::string(optarg);
+                    break;
+                case 'o':
+                    output_file_forced = std::string(optarg);
+                    break;
+            }
+        }
 
-//         print_opts();
-//         return 0;
-// }
+        display_help();
+        return 0;
+}
 
 static void display_help(char * progName)
 {
     std::cout << "Usage : " << progName << " [OPTIONS]\n"
               << "\n"
               << "  -h, --help     Print this menu\n"
-              << "  -t, --devTx    Device to use ... /dev/axis_fifo_0x43c10000\n"
-              << "  -r, --devRx    Device to use ... /dev/axis_fifo_0x43c10000\n";
+              << "  -n, --nseconds Number of seconds to run\n"
+              << "  -c, --config   Config file\n"
+              << "  -o, --output   Output file\n"
 }
 
-static void print_opts()
-{
-    std::cout << "Options : \n"
-              << "TBD: " << "\n";
-}
+// static void print_opts()
+// {
+//     std::cout << "Options : \n"
+//               << "TBD: " << "\n";
+// }
 
 int main(int argc, char** argv)
 {
     //process_options(argc, argv);
+    if (config_file == "") {
+        std::cerr << "Config file not set" << std::endl;
+        return -1;
+    }
     config = parse_config(config_file);
+    if (output_file_forced != "") {
+        output_file = output_file_forced;
+    } else {
+        output_file = config.output_file;
+    }
+
+
+
     debug_log = config.debug_log;
 
     if (config.runtime == 0) {
