@@ -44,16 +44,16 @@ extern "C" {
 
 /* global variables */
 static volatile bool running = false;
-int runtime = 0;
-int debug_log = 0;
-struct gpiod_chip *chip;
-struct gpiod_chip *chipled;
-struct gpiod_line_bulk gpios;
-struct gpiod_line_bulk leds;
+int runtime_seconds = 0;
+int debug_log_enabled = 0;
+struct gpiod_chip *gpio_chip;
+struct gpiod_chip *led_chip;
+struct gpiod_line_bulk gpio_lines;
+struct gpiod_line_bulk led_lines;
 
-std::string config_file = "";
-std::string output_file = "tdc_values.txt";
-std::string output_file_forced = "";
+std::string config_file_path = "";
+std::string output_file_path = "tdc_values.txt";
+std::string forced_output_file_path = "";
 
 Config config;
 std::vector<int> rx_values;
@@ -61,12 +61,12 @@ float rolling_avg[6] = {0.0};
 int led_values[8] = {0,0,0,0,0,0,0,1};
 
 static void signal_handler(int signal);
-void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd);
-static void display_help(char * progName);
+void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd);
+static void display_help(char *prog_name);
 static void quit(void);
 void frame_process(std::vector<int> packets);
 
-static int process_options(int argc, char * argv[])
+static int process_options(int argc, char *argv[])
 {
     for (;;) {
         int option_index = 0;
@@ -90,13 +90,13 @@ static int process_options(int argc, char * argv[])
                 exit(0);
                 break;
             case 'n':
-                runtime = atoi(optarg);
+                runtime_seconds = atoi(optarg);
                 break;
             case 'c':
-                config_file = std::string(optarg);
+                config_file_path = std::string(optarg);
                 break;
             case 'o':
-                output_file_forced = std::string(optarg);
+                forced_output_file_path = std::string(optarg);
                 break;
             default:
                 display_help(argv[0]);
@@ -108,9 +108,9 @@ static int process_options(int argc, char * argv[])
     return 0;
 }
 
-static void display_help(char * progName)
+static void display_help(char *prog_name)
 {
-    std::cout << "Usage : " << progName << " [OPTIONS]\n"
+    std::cout << "Usage : " << prog_name << " [OPTIONS]\n"
               << "\n"
               << "  -h, --help     Print this menu\n"
               << "  -n, --nseconds Number of seconds to run\n"
@@ -121,44 +121,44 @@ static void display_help(char * progName)
 int main(int argc, char** argv)
 {
     process_options(argc, argv);
-    if (config_file.empty()) {
+    if (config_file_path.empty()) {
         std::cerr << "Config file not set" << std::endl;
         return -1;
     }
-    config = parse_config(config_file);
-    output_file = output_file_forced.empty() ? config.output_file : output_file_forced;
-    debug_log = config.debug_log;
+    config = parse_config(config_file_path);
+    output_file_path = forced_output_file_path.empty() ? config.output_file : forced_output_file_path;
+    debug_log_enabled = config.debug_log;
 
     if (config.runtime == 0) {
         std::cerr << "Runtime not set" << std::endl;
         return -1;
     }
 
-    runtime = runtime == 0 ? config.runtime / 1000 : runtime;
+    runtime_seconds = runtime_seconds == 0 ? config.runtime / 1000 : runtime_seconds;
 
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
     signal(SIGQUIT, signal_handler);
 
-    chip = gpiod_chip_open_by_name(config.io_dev_config.hpc1_chip_name.c_str());
-    if (!chip) {
+    gpio_chip = gpiod_chip_open_by_name(config.io_dev_config.hpc1_chip_name.c_str());
+    if (!gpio_chip) {
         perror("Open chip failed");
         exit(EXIT_FAILURE);
     }
 
-    chipled = gpiod_chip_open_by_name(config.io_dev_config.led_chip_name.c_str());
-    if (!chipled) {
+    led_chip = gpiod_chip_open_by_name(config.io_dev_config.led_chip_name.c_str());
+    if (!led_chip) {
         perror("Open chip failed");
         exit(EXIT_FAILURE);
     }
 
-    int readFifoFd = open(config.io_dev_config.rx_dev_fifo.c_str(), O_RDONLY | O_NONBLOCK);
-    if (readFifoFd < 0) {
+    int read_fifo_fd = open(config.io_dev_config.rx_dev_fifo.c_str(), O_RDONLY | O_NONBLOCK);
+    if (read_fifo_fd < 0) {
         std::cerr << "Open read failed with error: " << std::strerror(errno) << std::endl;
         return -1;
     }
 
-    if (ioctl(readFifoFd, AXIS_FIFO_RESET_IP) < 0) {
+    if (ioctl(read_fifo_fd, AXIS_FIFO_RESET_IP) < 0) {
         perror("ioctl");
         return -1;
     }
@@ -168,25 +168,24 @@ int main(int argc, char** argv)
         return -1;
     }
 
-// Start TDC
     int hpc1_values[40] = {0};
     std::cout << "setting ASIC GPIOs to 0" << std::endl;
-    set_gpio_array(chip, &gpios, hpc1_values);
+    set_gpio_array(gpio_chip, &gpio_lines, hpc1_values);
 
-    tdc_reset(chip);
-    tdc_unreset(chip);
+    tdc_reset(gpio_chip);
+    tdc_unreset(gpio_chip);
 
     int chain_data[4] = {0};
     create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
     configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
 
     std::cout << "initialize the TDC" << std::endl;
-    tdc_test(chip, &gpios);
+    tdc_test(gpio_chip, &gpio_lines);
 
     std::cout << "setting leds to 0x01" << std::endl;
-    set_gpio_array(chipled, &leds, led_values);
+    set_gpio_array(led_chip, &led_lines, led_values);
 
-    std::ofstream output_fp(output_file, std::ios::out | std::ios::trunc);
+    std::ofstream output_fp(output_file_path, std::ios::out | std::ios::trunc);
     if (!output_fp) {
         perror("Failed to open output file");
         return -1;
@@ -195,32 +194,31 @@ int main(int argc, char** argv)
     set_rx_nbits(config.io_dev_config.nbits_rx);
     enable_rx();
 
-    std::thread read_from_fifo_thread(read_from_fifo_thread_fn, std::ref(output_fp), readFifoFd);
+    std::thread read_from_fifo_thread(read_from_fifo_thread_fn, std::ref(output_fp), read_fifo_fd);
 
-// perform noops
     while (running) {
-        sleep(runtime);
+        sleep(runtime_seconds);
         quit();
     }
 
-    gpiod_chip_close(chip);
+    gpiod_chip_close(gpio_chip);
 
     int led_values_off[8] = {1,1,1,1,1,1,1,1};
-    set_gpio_array(chipled, &leds, led_values_off);
-    gpiod_chip_close(chipled);
+    set_gpio_array(led_chip, &led_lines, led_values_off);
+    gpiod_chip_close(led_chip);
 
     output_fp.close();
     cleanup_rx();
     std::cout << "SHUTTING DOWN, wait for thread" << std::endl;
     read_from_fifo_thread.join();
-    close(readFifoFd);
+    close(read_fifo_fd);
 
     return 0;
 }
 
-void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
+void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
 {
-    ssize_t bytesFifo;
+    ssize_t bytes_fifo;
     int packets_rx = 0;
     char buf[MAX_BUF_SIZE_BYTES];
     int rx_occupancy = 0;
@@ -228,33 +226,33 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
     usleep(100);
     while (running) {
         while (rx_occupancy < MAX_BUF_SIZE_BYTES && running) {
-            ioctl(readFifoFd, AXIS_FIFO_GET_RX_OCCUPANCY, &rx_occupancy);
+            ioctl(read_fifo_fd, AXIS_FIFO_GET_RX_OCCUPANCY, &rx_occupancy);
             usleep(10);
         }
 
         disable_rx();
 
         while (packets_rx < rx_occupancy) {
-            bytesFifo = read(readFifoFd, buf, MAX_BUF_SIZE_BYTES);
-            if (bytesFifo < 0) {
+            bytes_fifo = read(read_fifo_fd, buf, MAX_BUF_SIZE_BYTES);
+            if (bytes_fifo < 0) {
                 std::cerr << "read error" << std::endl;
                 break;
             }
-            if (bytesFifo > 0) {
-                if (debug_log) {
-                    std::cout << "bytes from fifo " << bytesFifo << std::endl;
+            if (bytes_fifo > 0) {
+                if (debug_log_enabled) {
+                    std::cout << "bytes from fifo " << bytes_fifo << std::endl;
                     std::cout << "Read : " << std::endl;
                 }
-                for (int memidx = 0; memidx < bytesFifo / 4; memidx++) {
+                for (int mem_idx = 0; mem_idx < bytes_fifo / 4; mem_idx++) {
                     int value;
-                    std::memcpy(&value, &buf[memidx * 4], 4);
+                    std::memcpy(&value, &buf[mem_idx * 4], 4);
                     if (value != 0xAA0AAAAA) {
-                        if (debug_log) {
+                        if (debug_log_enabled) {
                             std::cout << "skipping 0x" << std::hex << value << std::endl;
                         }
                         continue;
                     }
-                    if (debug_log) {
+                    if (debug_log_enabled) {
                         std::cout << "0x" << std::hex << value << std::endl;
                     }
                     rx_values.push_back(value);
@@ -264,7 +262,7 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
             }
         }
 
-        if (debug_log) {
+        if (debug_log_enabled) {
             std::cout << packets_rx - 4 << " packets read" << std::endl;
         }
 
@@ -275,22 +273,21 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
 }
 
 int queue_processed = 0;
-const float alpha_min = 0.000000001;
+const float ALPHA_MIN = 0.000000001;
 
 void frame_process(std::vector<int> packets)
 {
     int num_packets = packets.size();
     float alpha = 1.0f / (10 * queue_processed);
     queue_processed++;
-    if (alpha < alpha_min) {
-        alpha = alpha_min;
+    if (alpha < ALPHA_MIN) {
+        alpha = ALPHA_MIN;
     }
 
     while (!packets.empty()) {
         int packet = packets.back();
         packets.pop_back();
         std::cout << "Packet: 0x" << std::hex << packet << std::endl;
-// we are reading in reverse order
         if (packet != 0xAAFFFFFF) {
             continue;
         }
