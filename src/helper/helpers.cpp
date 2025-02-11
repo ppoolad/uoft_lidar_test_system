@@ -5,20 +5,6 @@
 #include <string>
 
 
-void process_config(int argc, char** argv) {
-    // Parse command line arguments
-    for (int i = 1; i < argc; i++) {
-        if (std::string(argv[i]) == "-c") {
-            config_file = argv[i + 1];
-        } else if (std::string(argv[i]) == "-o") {
-            output_file = argv[i + 1];
-        } else if (std::string(argv[i]) == "-h") {
-            display_help(argv[0]);
-            exit(0);
-        }
-    }
-}
-
 void shift_array(int *array, int size, int insert){
     //int temp = array[size-1];
     for (int i = size-1; i > 0; i--)

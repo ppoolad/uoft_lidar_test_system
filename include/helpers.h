@@ -5,7 +5,7 @@
 #define HELPERS_H
 
 // processes runtime arguments from terminal
-void process_config(int argc, char** argv);
+//void process_config(int argc, char** argv);
 
 // shifts an array to the right and inserts a value at the beginning
 void shift_array(int *array, int size, int insert);
