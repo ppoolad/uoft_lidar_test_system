@@ -1,8 +1,8 @@
 /**
  * @file data_collector.cpp
+ * @brief Resets TDC and starts recording, stores them into a file
  * @author Pooya Poolad
  *      based on the driver by Jason Gutel
- * Resets TDC and starts recording, stores them into a file
  */
 
 #include <iostream>
@@ -42,7 +42,7 @@ extern "C" {
   #include "simple_rx.h"
 }
 
-/* global variables */
+/* Global variables */
 static volatile bool running = false;
 int runtime_seconds = 0;
 int debug_log_enabled = 0;
@@ -120,15 +120,21 @@ static void display_help(char *prog_name)
 
 int main(int argc, char** argv)
 {
+    // Process command-line options
     process_options(argc, argv);
+
+    // Validate config file path
     if (config_file_path.empty()) {
         std::cerr << "Config file not set" << std::endl;
         return -1;
     }
+
+    // Parse configuration
     config = parse_config(config_file_path);
     output_file_path = forced_output_file_path.empty() ? config.output_file : forced_output_file_path;
     debug_log_enabled = config.debug_log;
 
+    // Validate runtime
     if (config.runtime == 0) {
         std::cerr << "Runtime not set" << std::endl;
         return -1;
@@ -136,10 +142,12 @@ int main(int argc, char** argv)
 
     runtime_seconds = runtime_seconds == 0 ? config.runtime / 1000 : runtime_seconds;
 
+    // Setup signal handlers
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
     signal(SIGQUIT, signal_handler);
 
+    // Initialize GPIO chips
     gpio_chip = gpiod_chip_open_by_name(config.io_dev_config.hpc1_chip_name.c_str());
     if (!gpio_chip) {
         perror("Open chip failed");
@@ -152,22 +160,26 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
+    // Open FIFO for reading
     int read_fifo_fd = open(config.io_dev_config.rx_dev_fifo.c_str(), O_RDONLY | O_NONBLOCK);
     if (read_fifo_fd < 0) {
         std::cerr << "Open read failed with error: " << std::strerror(errno) << std::endl;
         return -1;
     }
 
+    // Reset FIFO
     if (ioctl(read_fifo_fd, AXIS_FIFO_RESET_IP) < 0) {
         perror("ioctl");
         return -1;
     }
 
+    // Initialize RX
     if (init_rx() < 0) {
         perror("init_rx");
         return -1;
     }
 
+    // Start TDC
     int hpc1_values[40] = {0};
     std::cout << "setting ASIC GPIOs to 0" << std::endl;
     set_gpio_array(gpio_chip, &gpio_lines, hpc1_values);
@@ -185,6 +197,7 @@ int main(int argc, char** argv)
     std::cout << "setting leds to 0x01" << std::endl;
     set_gpio_array(led_chip, &led_lines, led_values);
 
+    // Open output file
     std::ofstream output_fp(output_file_path, std::ios::out | std::ios::trunc);
     if (!output_fp) {
         perror("Failed to open output file");
@@ -194,13 +207,16 @@ int main(int argc, char** argv)
     set_rx_nbits(config.io_dev_config.nbits_rx);
     enable_rx();
 
+    // Start FIFO reading thread
     std::thread read_from_fifo_thread(read_from_fifo_thread_fn, std::ref(output_fp), read_fifo_fd);
 
+    // Main loop
     while (running) {
         sleep(runtime_seconds);
         quit();
     }
 
+    // Cleanup
     gpiod_chip_close(gpio_chip);
 
     int led_values_off[8] = {1,1,1,1,1,1,1,1};
