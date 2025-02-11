@@ -113,7 +113,7 @@ static int process_options(int argc, char * argv[])
             }
         }
 
-        display_help();
+        display_help(argv[0]);
         return 0;
 }
 
@@ -124,7 +124,7 @@ static void display_help(char * progName)
               << "  -h, --help     Print this menu\n"
               << "  -n, --nseconds Number of seconds to run\n"
               << "  -c, --config   Config file\n"
-              << "  -o, --output   Output file\n"
+              << "  -o, --output   Output file\n";
 }
 
 // static void print_opts()
@@ -343,10 +343,11 @@ void frame_process(std::vector<int> packets)
 
     //iterate and pop packets from the vector
     for (;;){
-        if packets.empty() {
+        if (packets.empty()) {
             break;
         }
-        int packet = packets.pop_back();
+        int packet = packets.back();
+        packets.pop_back();
         std::cout << "Packet: 0x" << std::hex << packet << std::endl;
         // we are reading in reverse order
         if (packet != 0xAAFFFFFF) {
@@ -366,7 +367,8 @@ void frame_process(std::vector<int> packets)
         // Check header
         // 7 packets before that is the header
         for (int i = 0; i < 6; i++) {
-            int tof = packets.pop_back();
+            int tof = packets.back();
+            packets.pop_back();
             //std::cout << "channel: " << i << ", Packet: 0x" << std::hex << packet << std::endl;
             // Calculate rolling average
             rolling_avg[5-i] =  (1-alpha) * rolling_avg[5-i] + (alpha) * ((float)(tof & 0x00FFFFFF));
@@ -374,7 +376,8 @@ void frame_process(std::vector<int> packets)
             //rolling_avg[i] = rolling_sum[i] / alpha;
         }
 
-        int header = packets.pop_back();
+        int header = packets.back();
+        packets.pop_back();
     }
 }
 
