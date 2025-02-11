@@ -62,14 +62,14 @@ Config config;
 
 //global output vector
 std::vector<int> rx_values;
-
+float rolling_avg[6] = {0.0};
 //led values indicating running
 int led_values[8] = {0,0,0,0,0,0,0,1};
 static void signal_handler(int signal);
 void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd);
 static void display_help(char * progName);
 static void quit(void);
-void frame_process(char* packets, int size);
+void frame_process(std::vector<int> packets);
 //static void print_opts();
 
 static int process_options(int argc, char * argv[])
@@ -313,9 +313,68 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int readFifoFd)
         }
 
         if (debug_log) {
-            std::cout << packets_rx << " packets read" << std::endl;
+            std::cout << packets_rx-4 << " packets read" << std::endl;
         }
 
+        // we should process frames here
+        frame_process(rx_values);
+        packets_rx = 0;
+        rx_occupancy = 0;
+    }
+}
+
+int queue_processed = 0;
+int alpha_min = 0.000000001;
+void frame_process(std::vector<int> packets)
+{
+    //process the packets
+    // if (packets.size() % 4 != 0) {
+    //     std::cout << "Invalid packet size" << std::endl;
+    //     return;
+    // }
+
+    int num_packets = packets.size();
+    int correct = 0;
+    //alpha shoud start from 1/10 and go to alpha max (1/100000) based on number of times this function is executed (queue processed)
+    float alpha = (1/(10*queue_processed));
+    queue_processed++;
+    if (alpha < alpha_min)
+        alpha = alpha_min;
+
+    //iterate and pop packets from the vector
+    for (;;){
+        if packets.empty() {
+            break;
+        }
+        int packet = packets.pop_back();
+        std::cout << "Packet: 0x" << std::hex << packet << std::endl;
+        // we are reading in reverse order
+        if (packet != 0xAAFFFFFF) {
+            continue;
+        }
+        //int packet_integrity = 0;
+        // if the 7th packet before this is not 0xAA0AAAAA, then we have a corrupted frame
+        if (packets.size() < 7) {
+            continue;
+        }
+        std::cout << "HEADER Packet: 0x" << std::hex << packets[packets.size() - 6] << std::endl;
+        if (packets[packets.size() - 6] != 0xAA0AAAAA) {
+            continue;
+        }
+
+        // if we are here, we have a valid frame
+        // Check header
+        // 7 packets before that is the header
+        for (int i = 0; i < 6; i++) {
+            int tof = packets.pop_back();
+            //std::cout << "channel: " << i << ", Packet: 0x" << std::hex << packet << std::endl;
+            // Calculate rolling average
+            rolling_avg[5-i] =  (1-alpha) * rolling_avg[5-i] + (alpha) * ((float)(tof & 0x00FFFFFF));
+            rolling_avg[5-i] = rolling_avg[5-i];
+            //rolling_avg[i] = rolling_sum[i] / alpha;
+        }
+
+        int header = packets.pop_back();
     }
 }
 
