@@ -272,7 +272,8 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
                                       << std::hex << (int) buf[0] << std::endl;
 
                     std::memcpy(&value, &buf[mem_idx * 4], 4);
-                    if (value != 0xAA0AAAAA || ~found_header) {
+                    // if it's not the header or we haven't found the header yet, skip
+                    if (value != 0xAA0AAAAA && (!found_header)) {
                         if (debug_log_enabled) {
                             std::cout << "skipping 0x" << std::hex << value << std::endl;
                         }
@@ -297,7 +298,7 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
         frame_process(rx_values);
         packets_rx = 0;
         rx_occupancy = 0;
-        found_header = 0;
+        //found_header = 0;
         enable_rx(); // enable it again
     }
 }
