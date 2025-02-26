@@ -24,7 +24,7 @@ kernel_std_devs=1000,1000
 debug_log=1
 
 #tdc configs
-tdc_channel_enables=1,1,1,1,1,1
+tdc_channel_enables=1 1 1 1 1 1
 tdc_channel_offsets=0,0,0,0,0,0
 tdc_chain_num_words=4
 tdc_chain_num_bits=36
