@@ -319,26 +319,28 @@ void frame_process(std::vector<int> packets)
     while (!packets.empty()) {
         int packet = packets.back();
         packets.pop_back();
-        std::cout << "Packet: 0x" << std::hex << packet << std::endl;
+        if (debug_log_enabled) std::cout << "Packet: 0x" << std::hex << packet << std::endl;
         if (packet != 0xAAFFFFFF) {
             continue;
         }
         if (packets.size() < 7) {
             continue;
         }
-        std::cout << "HEADER Packet: 0x" << std::hex << packets[packets.size() - 7] << std::endl;
+        if (debug_log_enabled) std::cout << "HEADER Packet: 0x" << std::hex << packets[packets.size() - 7] << std::endl;
         if (packets[packets.size() - 7] != 0xAA0AAAAA) {
             continue;
         }
 
         for (int i = 0; i < 6; i++) {
             int tof = packets.back();
-            std::cout << "tof" << i << ": " << tof << std::endl;
+            if (debug_log_enabled) std::cout << "tof" << i << ": " << tof << std::endl;
             packets.pop_back();
             rolling_avg[5 - i] = (1 - alpha) * rolling_avg[5 - i] + alpha * (tof & 0x00FFFFFF);
+            // print rolling average 
+            std::cout << "rolling_avg" << i << ": " << rolling_avg[5 - i] << std::endl;
         }
-	
-	//pop header
+        
+	    //pop the next thing that should be header
         packets.pop_back();
     }
 }
