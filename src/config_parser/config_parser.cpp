@@ -65,31 +65,31 @@ Config parse_config(std::string filename) {
             } else if (key == "snr"){
                 config.dsp_config.snr = std::stof(value);
             } else if (key == "kernel_means") {
-                std::istringstream iss(value);
+                std::istringstream issx(value);
                 for (int i = 0; i < 4; i++) {
-                    iss >> config.dsp_config.kernel_means[i];
+                    issx >> config.dsp_config.kernel_means[i];
                 }
             } else if (key == "kernel_std_devs") {
-                std::istringstream iss(value);
+                std::istringstream issx(value);
                 for (int i = 0; i < 4; i++) {
-                    iss >> config.dsp_config.kernel_std_devs[i];
+                    issx >> config.dsp_config.kernel_std_devs[i];
                 }
             } else if (key == "kernel_weights") {
-                std::istringstream iss(value);
+                std::istringstream issx(value);
                 for (int i = 0; i < 4; i++) {
-                    iss >> config.dsp_config.kernel_weights[i];
+                    issx >> config.dsp_config.kernel_weights[i];
                 }
             } else if (key == "debug_log") {
                 config.debug_log = std::stoi(value);
             } else if (key == "tdc_channel_enables") {
-                std::istringstream iss(value);
+                std::istringstream issx(value);
                 for (int i = 0; i < 6; i++) {
-                    iss >> config.tdc_config.channel_enables[i];
+                    issx >> config.tdc_config.channel_enables[i];
                 }
             } else if (key == "tdc_channel_offsets") {
-                std::istringstream iss(value);
+                std::istringstream issx(value);
                 for (int i = 0; i < 6; i++) {
-                    iss >> config.tdc_config.channel_offsets[i];
+                    issx >> config.tdc_config.channel_offsets[i];
                 }
             } else if (key == "tdc_chain_num_words") {
                 config.tdc_config.tdc_chain_num_words = std::stoi(value);
