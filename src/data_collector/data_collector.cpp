@@ -314,6 +314,7 @@ void frame_process(std::vector<int> packets)
 {
     int num_packets = packets.size();
     double alpha = 1.0f / (double)(10 * queue_processed);
+    std::cout << "alpha: " << alpha << std::endl;
     if (alpha < ALPHA_MIN) {
         alpha = ALPHA_MIN;
     } else {
