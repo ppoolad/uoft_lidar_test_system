@@ -261,7 +261,7 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
             if (bytes_fifo > 0) {
                 if (debug_log_enabled) {
                     std::cout << "bytes from fifo " << bytes_fifo << std::endl;
-                    std::cout << "Read : " << std::endl;
+                    std::cout << "Read : " << std::hex << value << std::endl;
                 }
                 for (int mem_idx = 0; mem_idx < bytes_fifo / 4; mem_idx++) {
                     int value;
@@ -289,6 +289,7 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
         frame_process(rx_values);
         packets_rx = 0;
         rx_occupancy = 0;
+        enable_rx(); // enable it again
     }
 }
 
