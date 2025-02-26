@@ -303,13 +303,13 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
     }
 }
 
-int queue_processed = 0;
+int queue_processed = 1;
 const float ALPHA_MIN = 0.000000001;
 
 void frame_process(std::vector<int> packets)
 {
     int num_packets = packets.size();
-    float alpha = 1.0f / (10 * queue_processed);
+    float alpha = 1.0f / (float)(10 * queue_processed);
     if (alpha < ALPHA_MIN) {
         alpha = ALPHA_MIN;
     } else {
@@ -335,7 +335,7 @@ void frame_process(std::vector<int> packets)
             int tof = packets.back();
             if (debug_log_enabled) std::cout << "tof" << i << ": " << tof << std::endl;
             packets.pop_back();
-            rolling_avg[5 - i] = (1 - alpha) * rolling_avg[5 - i] + alpha * (tof & 0x00FFFFFF);
+            rolling_avg[5 - i] = (1 - alpha) * rolling_avg[5 - i] + alpha * (float)(tof & 0x00FFFFFF);
             // print rolling average 
             std::cout << "rolling_avg" << i << ": " << rolling_avg[5 - i] << std::endl;
         }
