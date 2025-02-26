@@ -310,9 +310,10 @@ void frame_process(std::vector<int> packets)
 {
     int num_packets = packets.size();
     float alpha = 1.0f / (10 * queue_processed);
-    queue_processed++;
     if (alpha < ALPHA_MIN) {
         alpha = ALPHA_MIN;
+    } else {
+	    queue_processed++;    
     }
 
     while (!packets.empty()) {
@@ -325,17 +326,19 @@ void frame_process(std::vector<int> packets)
         if (packets.size() < 7) {
             continue;
         }
-        std::cout << "HEADER Packet: 0x" << std::hex << packets[packets.size() - 6] << std::endl;
-        if (packets[packets.size() - 6] != 0xAA0AAAAA) {
+        std::cout << "HEADER Packet: 0x" << std::hex << packets[packets.size() - 7] << std::endl;
+        if (packets[packets.size() - 7] != 0xAA0AAAAA) {
             continue;
         }
 
         for (int i = 0; i < 6; i++) {
             int tof = packets.back();
+            std::cout << "tof" << i << ": " << tof << std::endl;
             packets.pop_back();
             rolling_avg[5 - i] = (1 - alpha) * rolling_avg[5 - i] + alpha * (tof & 0x00FFFFFF);
         }
-
+	
+	//pop header
         packets.pop_back();
     }
 }
