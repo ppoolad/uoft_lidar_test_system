@@ -261,18 +261,20 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
             if (bytes_fifo > 0) {
                 if (debug_log_enabled) {
                     std::cout << "bytes from fifo " << bytes_fifo << std::endl;
-                    std::cout << "Read : " << std::hex << value << std::endl;
+                    //std::cout << "Read : " << std::hex << value << std::endl;
                 }
                 for (int mem_idx = 0; mem_idx < bytes_fifo / 4; mem_idx++) {
                     int value;
+                    int found_header = 0;
                     std::cout << "0x" << std::hex << buf[3] << std::hex << buf[2] << std::hex << buf[1] << std::hex << buf[0] << std::endl;
                     std::memcpy(&value, &buf[mem_idx * 4], 4);
-                    if (value != 0xAA0AAAAA) {
+                    if (value != 0xAA0AAAAA || ~found_header) {
                         if (debug_log_enabled) {
                             std::cout << "skipping 0x" << std::hex << value << std::endl;
                         }
                         continue;
                     }
+                    found_header = 1;
                     if (debug_log_enabled) {
                         std::cout << "0x" << std::hex << value << std::endl;
                     }
