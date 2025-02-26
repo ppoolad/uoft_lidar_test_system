@@ -221,6 +221,7 @@ int main(int argc, char** argv)
     }
 
     // Cleanup
+    // remove rx_
     gpiod_chip_close(gpio_chip);
 
     int led_values_off[8] = {1,1,1,1,1,1,1,1};
@@ -229,6 +230,8 @@ int main(int argc, char** argv)
 
     output_fp.close();
     cleanup_rx();
+    // remove rx_fifo
+    rx_values.clear();
     std::cout << "SHUTTING DOWN, wait for thread" << std::endl;
     read_from_fifo_thread.join();
     close(read_fifo_fd);
