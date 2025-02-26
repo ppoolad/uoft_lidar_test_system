@@ -251,7 +251,8 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
         }
 
         disable_rx();
-
+        
+        int found_header = 0;
         while (packets_rx < rx_occupancy) {
             bytes_fifo = read(read_fifo_fd, buf, MAX_BUF_SIZE_BYTES);
             if (bytes_fifo < 0) {
@@ -265,7 +266,6 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
                 }
                 for (int mem_idx = 0; mem_idx < bytes_fifo / 4; mem_idx++) {
                     int value;
-                    int found_header = 0;
                     std::cout << "0x" << std::hex << buf[3] << std::hex << buf[2] << std::hex << buf[1] << std::hex << buf[0] << std::endl;
                     std::memcpy(&value, &buf[mem_idx * 4], 4);
                     if (value != 0xAA0AAAAA || ~found_header) {
@@ -286,12 +286,13 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
         }
 
         if (debug_log_enabled) {
-            std::cout << packets_rx - 4 << " packets read" << std::endl;
+            std::cout << (int)(packets_rx - 4) << " packets read" << std::endl;
         }
 
         frame_process(rx_values);
         packets_rx = 0;
         rx_occupancy = 0;
+        found_header = 0;
         enable_rx(); // enable it again
     }
 }
