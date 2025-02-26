@@ -269,11 +269,12 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
                 }
                 for (int mem_idx = 0; mem_idx < bytes_fifo / 4; mem_idx++) {
                     int value;
-                    std::cout << "0x" << std::hex << (int) buf[3] 
-                                      << std::hex << (int) buf[2] 
-                                      << std::hex << (int) buf[1] 
-                                      << std::hex << (int) buf[0] << std::endl;
-
+                    if (debug_log_enabled){
+                        std::cout << "0x" << std::hex << (int) buf[3] 
+                                        << std::hex << (int) buf[2] 
+                                        << std::hex << (int) buf[1] 
+                                        << std::hex << (int) buf[0] << std::endl;
+                    }
                     std::memcpy(&value, &buf[mem_idx * 4], 4);
                     // if it's not the header or we haven't found the header yet, skip
                     if (value != 0xAA0AAAAA && (!found_header)) {
@@ -340,8 +341,14 @@ void frame_process(std::vector<int> packets)
             packets.pop_back();
             rolling_avg[5 - i] = (1 - alpha) * rolling_avg[5 - i] + alpha * (float)(tof & 0x00FFFFFF);
             // print rolling average 
-            std::cout << "rolling_avg" << i << ": " << rolling_avg[5 - i] << std::endl;
+            //std::cout << "rolling_avg" << i << ": " << rolling_avg[5 - i] << std::endl;
         }
+        
+        std::cout << "\r";
+        for (int i = 0; i < 6; i++) {
+            std::cout << "rolling_avg[" << i << "] = " << rolling_avg[i] << " ";
+        }
+        std::cout << std::flush;
         
 	    //pop the next thing that should be header
         packets.pop_back();
