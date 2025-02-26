@@ -346,7 +346,7 @@ void frame_process(std::vector<int> packets)
         
         std::cout << "\r";
         for (int i = 0; i < 6; i++) {
-            std::cout << "rolling_avg[" << i << "] = " << rolling_avg[i] << " ";
+            std::cout << "avg[" << i << "] = " << rolling_avg[i] << " ";
         }
         std::cout << std::flush;
         
