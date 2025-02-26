@@ -57,7 +57,7 @@ std::string forced_output_file_path;//("");
 
 Config config;
 std::vector<int> rx_values;
-float rolling_avg[6] = {0.0};
+double rolling_avg[6] = {0.0};
 int led_values[8] = {0,0,0,0,0,0,0,1};
 
 static void signal_handler(int signal);
@@ -308,12 +308,12 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
 }
 
 int queue_processed = 1;
-const float ALPHA_MIN = 0.000000001;
+const double ALPHA_MIN = 0.000000001;
 
 void frame_process(std::vector<int> packets)
 {
     int num_packets = packets.size();
-    float alpha = 1.0f / (float)(10 * queue_processed);
+    double alpha = 1.0f / (double)(10 * queue_processed);
     if (alpha < ALPHA_MIN) {
         alpha = ALPHA_MIN;
     } else {
@@ -339,7 +339,7 @@ void frame_process(std::vector<int> packets)
             int tof = packets.back();
             if (debug_log_enabled) std::cout << "tof" << i << ": " << tof << std::endl;
             packets.pop_back();
-            rolling_avg[5 - i] = (1 - alpha) * rolling_avg[5 - i] + alpha * (float)(tof & 0x00FFFFFF);
+            rolling_avg[5 - i] = (1.0 - alpha) * rolling_avg[5 - i] + alpha * (double)(tof & 0x00FFFFFF);
             // print rolling average 
             //std::cout << "rolling_avg" << i << ": " << rolling_avg[5 - i] << std::endl;
         }
