@@ -313,7 +313,7 @@ const double ALPHA_MIN = 0.000000001;
 void frame_process(std::vector<int> packets)
 {
     int num_packets = packets.size();
-    double alpha = 1.0f / (double)(100 * queue_processed);
+    double alpha = 1.0f / (double)(1000 * queue_processed);
     //std::cout << "alpha: " << alpha << std::endl;
     if (alpha < ALPHA_MIN) {
         alpha = ALPHA_MIN;
@@ -324,10 +324,13 @@ void frame_process(std::vector<int> packets)
     while (!packets.empty()) {
         int packet = packets.back();
         packets.pop_back();
+
         if (debug_log_enabled) std::cout << "Packet: 0x" << std::hex << packet << std::endl;
         if (packet != 0xAAFFFFFF) {
             continue;
         }
+
+        // if we're here, we reached a packet end
         if (packets.size() < 7) {
             continue;
         }
@@ -336,9 +339,10 @@ void frame_process(std::vector<int> packets)
             continue;
         }
 
+        //if we are here, the packet is valid
         for (int i = 0; i < 6; i++) {
             int tof = packets.back() & 0x00FFFFFF;
-            //std::cout << "tof" << i << ": " << tof << std::endl;
+            std::cout << "tof" << i << ": " << tof << std::endl;
             packets.pop_back();
             rolling_avg[5 - i] = ((1.0 - alpha) * rolling_avg[5 - i]) + alpha * (double)(tof & 0x00FFFFFF);
             // print rolling average 
