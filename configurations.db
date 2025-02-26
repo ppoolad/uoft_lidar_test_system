@@ -1,20 +1,20 @@
 #gpio
-hpc1_chip_name="gpiochip3"
+hpc1_chip_name=gpiochip3
 num_hpc1=40
-hpc0_chip_name="gpiochip2"
+hpc0_chip_name=gpiochip2
 num_hpc0=32
-led_chip_name="gpiochip0"
+led_chip_name=gpiochip0
 num_led=8
-pb_chip_name="gpiochip1"
+pb_chip_name=gpiochip1
 num_pb=5
 
 #general
 runtime_ms=2000;
-output_file="data_out.txt"
+output_file=data_out.txt
 #rx
-rx_dev_fifo="/axis_fifo_0x00000000a0030000"
+rx_dev_fifo=/dev/axis_fifo_0x00000000a0030000
 nbits_rx=32
-uio_device="/dev/uio6"
+uio_device=/dev/uio6
 
 #dsp
 snr=0.8;
@@ -28,5 +28,5 @@ tdc_channel_enables=1,1,1,1,1,1
 tdc_channel_offsets=0,0,0,0,0,0
 tdc_chain_num_words=4
 tdc_chain_num_bits=36
-tdc_chain_time_out=100000
+tdc_chain_timeout=100000
 
