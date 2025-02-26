@@ -44,16 +44,16 @@ extern "C" {
 
 /* Global variables */
 static volatile bool running = false;
-int runtime_seconds = 0;
+int runtime_seconds = 100;
 int debug_log_enabled = 0;
 struct gpiod_chip *gpio_chip;
 struct gpiod_chip *led_chip;
 struct gpiod_line_bulk gpio_lines;
 struct gpiod_line_bulk led_lines;
 
-std::string config_file_path = "";
-std::string output_file_path = "tdc_values.txt";
-std::string forced_output_file_path = "";
+std::string config_file_path;//("");
+std::string output_file_path;//("tdc_values.txt");
+std::string forced_output_file_path;//("");
 
 Config config;
 std::vector<int> rx_values;
@@ -70,7 +70,7 @@ static int process_options(int argc, char *argv[])
 {
     for (;;) {
         int option_index = 0;
-        static const char *short_options = "hnco:t:";
+        static const char *short_options = "hnco:";
         static const struct option long_options[] = {
             {"help", no_argument, 0, 'h'},
             {"nseconds", required_argument, 0, 'n'},
@@ -96,7 +96,7 @@ static int process_options(int argc, char *argv[])
                 config_file_path = std::string(optarg);
                 break;
             case 'o':
-                forced_output_file_path = std::string(optarg);
+                forced_output_file_path = (optarg);
                 break;
             default:
                 display_help(argv[0]);
@@ -104,7 +104,7 @@ static int process_options(int argc, char *argv[])
         }
     }
 
-    display_help(argv[0]);
+    //display_help(argv[0]);
     return 0;
 }
 
@@ -121,8 +121,10 @@ static void display_help(char *prog_name)
 int main(int argc, char** argv)
 {
     // Process command-line options
+    std::cout << "Processing options" << std::endl;
     process_options(argc, argv);
 
+    std::cout << "reading config file" << std::endl;
     // Validate config file path
     if (config_file_path.empty()) {
         std::cerr << "Config file not set" << std::endl;
@@ -130,6 +132,7 @@ int main(int argc, char** argv)
     }
 
     // Parse configuration
+    std::cout << "parsing config file" << std::endl;
     config = parse_config(config_file_path);
     output_file_path = forced_output_file_path.empty() ? config.output_file : forced_output_file_path;
     debug_log_enabled = config.debug_log;
@@ -208,6 +211,7 @@ int main(int argc, char** argv)
     enable_rx();
 
     // Start FIFO reading thread
+    running = true;
     std::thread read_from_fifo_thread(read_from_fifo_thread_fn, std::ref(output_fp), read_fifo_fd);
 
     // Main loop
@@ -272,7 +276,7 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
                         std::cout << "0x" << std::hex << value << std::endl;
                     }
                     rx_values.push_back(value);
-                    output_fp << value << std::endl;
+                    output_fp << std::hex << value << std::endl;
                     packets_rx += 4;
                 }
             }
