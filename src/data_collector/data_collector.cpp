@@ -265,6 +265,7 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
                 }
                 for (int mem_idx = 0; mem_idx < bytes_fifo / 4; mem_idx++) {
                     int value;
+                    std::cout << "0x" << std::hex << buf[3] << std::hex << buf[2] << std::hex << buf[1] << std::hex << buf[0] << std::endl;
                     std::memcpy(&value, &buf[mem_idx * 4], 4);
                     if (value != 0xAA0AAAAA) {
                         if (debug_log_enabled) {
