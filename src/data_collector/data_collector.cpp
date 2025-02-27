@@ -224,9 +224,17 @@ int main(int argc, char** argv)
     std::thread read_from_fifo_thread(read_from_fifo_thread_fn, std::ref(output_fp), read_fifo_fd);
 
     // Main loop
+    auto start_time = std::chrono::steady_clock::now();
     while (running) {
-        sleep(runtime_seconds);
-        quit();
+        auto current_time = std::chrono::steady_clock::now();
+        auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
+        if (elapsed_time >= runtime_seconds) {
+            quit();
+            break;
+        }
+        sleep(runtime_seconds/8);
+        shift_array(led_values, 8, 1);
+        
     }
 
     // Cleanup
