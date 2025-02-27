@@ -97,11 +97,14 @@ Config parse_config(std::string filename) {
                 config.tdc_config.tdc_chain_num_bits = std::stoi(value);
             } else if (key == "tdc_chain_timeout") {
                 config.tdc_config.tdc_chain_timeout = std::stoi(value);
-            // } else if (key == "tdc_serdes_nbits") {
-            //     config.tdc_config.tdc_serdes_nbits = std::stoi(value);
-            // }
-            
-            
+            } else if (key == "tdc_start_mode") {
+                config.tdc_config.tdc_start_mode = std::stoi(value);
+            } else if (key == "tdc_coarse_mode") {
+                config.tdc_config.tdc_coarse_mode = std::stoi(value);
+            } else if (key == "tdc_external_mode") {
+                config.tdc_config.tdc_external_mode = std::stoi(value);
+            } else if (key == "scheduler_external_mode") {
+                config.tdc_config.scheduler_external_mode = std::stoi(value);
             } else {
                 std::cerr << "Error: unknown key " << key << std::endl;
             }

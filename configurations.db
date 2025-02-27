@@ -18,15 +18,19 @@ uio_device=/dev/uio6
 
 #dsp
 snr=0.8;
-kernel_means=2222,4444
-kernel_weights=.5,.5
-kernel_std_devs=1000,1000
-debug_log=0
+kernel_means=2222 4444
+kernel_weights=.5 .5
+kernel_std_devs=1000 1000
+debug_log=1
 
 #tdc configs
 tdc_channel_enables=1 1 1 1 1 1
-tdc_channel_offsets=0,0,0,0,0,0
+tdc_channel_offsets=0 0 0 0 0 0
 tdc_chain_num_words=4
 tdc_chain_num_bits=36
 tdc_chain_timeout=100000
+tdc_start_mode=1
+tdc_coarse_mode=1
+tdc_external_mode=0
+scheduler_external_mode=0
 
