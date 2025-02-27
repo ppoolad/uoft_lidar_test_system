@@ -20,7 +20,7 @@ def read_data(file_path):
         i += 1
         
         # Read 6 data points (one for each channel)
-        start_tof = int(lines[i+5]) & 0x00FFFFFF
+        start_tof = int(lines[i+5],16) & 0x00FFFFFF
         for ch in range(5):
             if i >= n_lines:
                 #raise ValueError(f"Unexpected end of file when reading channel {ch} data.")
@@ -33,7 +33,7 @@ def read_data(file_path):
                 if lines[i] == "aaffffff" or lines[i] == "aa0aaaaa":
                     i += 1
                     break
-                data_point = int(lines[i]) & 0x00FFFFFF
+                data_point = int(lines[i],16) & 0x00FFFFFF
             except ValueError:
                 raise ValueError(f"Invalid data at line {i+1}: '{lines[i]}'")
             channels[ch].append(data_point-start_tof)
