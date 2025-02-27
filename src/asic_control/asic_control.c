@@ -123,6 +123,40 @@ int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     
     return 0;
 }
+int tdc_start_mode(int power_state,struct gpiod_chip *chip){
+    set_gpio_value(chip, TDC_START_MODE, power_state);
+    return 0;
+}
+// enable coarse mode
+int tdc_coarse_mode(int power_state,struct gpiod_chip *chip){
+    set_gpio_value(chip, COARSE_EN, power_state);
+    return 0;
+}
+
+int tdc_external_mode(int power_state,struct gpiod_chip *chip){
+    set_gpio_value(chip, TDC_STOP_DEBUG_MODE, power_state);
+    return 0;
+}
+
+int scheduler_external_mode(int power_state,struct gpiod_chip *chip){
+    set_gpio_value(chip, EXTERNAL_EN, power_state);
+    return 0;
+}
+
+int scheduler_enable(int power_state,struct gpiod_chip *chip){
+    set_gpio_value(chip, SCHED_EN, power_state);
+    return 0;
+}
+
+int scheduler_reset(struct gpiod_chip *chip){
+    set_gpio_value(chip, SCHED_ARESETN, 0);
+    return 0;
+}
+
+int scheduler_unreset(struct gpiod_chip *chip){
+    set_gpio_value(chip, SCHED_ARESETN, 1);
+    return 0;
+}
 
 // start tds serializer
 int tdc_serializer(int power_state,struct gpiod_chip *chip){
