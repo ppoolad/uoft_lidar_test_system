@@ -4,6 +4,8 @@
 
 int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios);
 int dsp_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios);
+int tdc_enable(struct gpiod_chip *chip);
+int tdc_disable(struct gpiod_chip *chip);
 int tdc_reset(struct gpiod_chip *chip);
 int tdc_unreset(struct gpiod_chip *chip);
 int tdc_serializer(int power_state,struct gpiod_chip *chip);
