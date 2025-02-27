@@ -191,11 +191,20 @@ int main(int argc, char** argv)
     tdc_unreset(gpio_chip);
 
     int chain_data[4] = {0};
-    //create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
-    //configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
+    create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
+    configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
 
     std::cout << "initialize the TDC" << std::endl;
-    tdc_test(gpio_chip, &gpio_lines);
+    tdc_start_mode(config.tdc_config.tdc_start_mode, gpio_chip);
+    tdc_coarse_mode(config.tdc_config.tdc_coarse_mode, gpio_chip);
+    tdc_external_mode(config.tdc_config.tdc_external_mode, gpio_chip);
+    scheduler_external_mode(config.tdc_config.scheduler_external_mode, gpio_chip);
+    tdc_coarse_mode(config.tdc_config.tdc_coarse_mode, gpio_chip);
+    scheduler_reset(gpio_chip);
+    scheduler_unreset(gpio_chip);
+    tdc_enable(gpio_chip);
+    tdc_serializer(1, gpio_chip);
+    scheduler_enable(1, gpio_chip);
 
     std::cout << "setting leds to 0x01" << std::endl;
     set_gpio_array(led_chip, &led_lines, led_values);

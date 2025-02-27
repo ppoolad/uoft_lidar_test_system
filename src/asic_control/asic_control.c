@@ -123,6 +123,17 @@ int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     
     return 0;
 }
+
+int tdc_enable(struct gpiod_chip *chip){
+    set_gpio_value(chip, TDC_EN, 1);
+    return 0;
+}
+
+int tdc_disable(struct gpiod_chip *chip){
+    set_gpio_value(chip, TDC_EN, 0);
+    return 0;
+}
+
 int tdc_start_mode(int power_state,struct gpiod_chip *chip){
     set_gpio_value(chip, TDC_START_MODE, power_state);
     return 0;
