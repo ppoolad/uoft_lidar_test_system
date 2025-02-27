@@ -191,8 +191,8 @@ int main(int argc, char** argv)
     tdc_unreset(gpio_chip);
 
     int chain_data[4] = {0};
-    create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
-    configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
+    //create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
+    //configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
 
     std::cout << "initialize the TDC" << std::endl;
     tdc_test(gpio_chip, &gpio_lines);
@@ -342,7 +342,7 @@ void frame_process(std::vector<int> packets)
         //if we are here, the packet is valid
         for (int i = 0; i < 6; i++) {
             int tof = packets.back() & 0x00FFFFFF;
-            std::cout << "tof" << i << ": " << tof << std::endl;
+            //std::cout << "tof" << i << ": " << tof << std::endl;
             packets.pop_back();
             rolling_avg[5 - i] = ((1.0 - alpha) * rolling_avg[5 - i]) + alpha * (double)(tof & 0x00FFFFFF);
             // print rolling average 
