@@ -34,6 +34,10 @@ typedef struct {
     int tdc_chain_num_bits;
     int tdc_chain_timeout;
     int tdc_serdes_nbits;
+    int tdc_start_mode = 0;
+    int tdc_coarse_mode = 0;
+    int tdc_external_mode = 0;
+    int scheduler_external_mode = 0;
 } TDC_config;
 
 typedef struct {
