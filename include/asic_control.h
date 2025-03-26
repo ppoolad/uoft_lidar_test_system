@@ -12,6 +12,7 @@ int tdc_serializer(int power_state,struct gpiod_chip *chip);
 int tdc_start_mode(int power_state,struct gpiod_chip *chip);
 int tdc_coarse_mode(int power_state,struct gpiod_chip *chip);
 int tdc_external_mode(int power_state,struct gpiod_chip *chip);
+int tdc_tof_test_mode(int power_state,struct gpiod_chip *chip);
 int scheduler_external_mode(int power_state,struct gpiod_chip *chip);
 int scheduler_enable(int power_state,struct gpiod_chip *chip);
 int scheduler_reset(struct gpiod_chip *chip);
@@ -26,6 +27,6 @@ int dsp_enable(struct gpiod_chip *chip);
 int dsp_disable(struct gpiod_chip *chip);
 int dsp_select_pixel(struct gpiod_chip *chip, int pixel);
 int dsp_serializer(int power_state,struct gpiod_chip *chip);
-
+int init_gpio_gnd(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios);
 
 #endif /* ASIC_CONTROL_H */

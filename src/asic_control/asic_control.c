@@ -94,6 +94,13 @@ int dsp_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     return 0;
 }
 // start tdc_test_protocol
+int init_gpio_gnd(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
+    int gpio_values[HPC1_NUM_GPIO] = {0};
+    // don't reset the tdc
+    //gpio_values[TDC_ARESETN] = 1;
+    set_gpio_array(chip, gpios, gpio_values);
+    return 0;
+}
 int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     int gpio_values[HPC1_NUM_GPIO] = {0};
     // don't reset the tdc
@@ -106,7 +113,7 @@ int tdc_test(struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     gpio_values[TDC_EN] = 1;		 //enable tdc
     gpio_values[DIGITAL_EN] = 1;		 //enable tdc
     gpio_values[DSP_ARESETN] = 1;
-    gpio_values[COARSE_EN] = 1;		 //enable tdc
+    gpio_values[COARSE_EN] = 0;		 //enable tdc
     gpio_values[TDC_DEBUG_RD_EN] = 1;	 //enable serializer
     gpio_values[TDC_STOP_DEBUG_MODE] = 0;//set this one to get external signal;
     gpio_values[SCHED_ARESETN] = 1;
@@ -144,6 +151,12 @@ int tdc_coarse_mode(int power_state,struct gpiod_chip *chip){
     return 0;
 }
 
+int tdc_tof_test_mode(int power_state,struct gpiod_chip *chip){
+    set_gpio_value(chip, TOF_TEST_MODE, power_state);
+    return 0;
+}
+
+// enable external mode
 int tdc_external_mode(int power_state,struct gpiod_chip *chip){
     set_gpio_value(chip, TDC_STOP_DEBUG_MODE, power_state);
     return 0;
