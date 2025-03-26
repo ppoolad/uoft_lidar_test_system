@@ -45,7 +45,7 @@
 #define DEBUG_PRINT(fmt, args...) printf("DEBUG %s:%d(): " fmt, \
         __func__, __LINE__, ##args)
 
-#define DEBUG 0
+#define DEBUG 1
 struct thread_data {
     int rc;
 };

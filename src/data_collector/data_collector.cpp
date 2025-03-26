@@ -192,33 +192,48 @@ int main(int argc, char** argv)
 
     int chain_data[4] = {0};
     create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
-    configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
-
+    
     std::cout << "initialize the TDC" << std::endl;
+    //tdc_test(gpio_chip,&gpio_lines);
+    
+    
+    init_gpio_gnd(gpio_chip, &gpio_lines);
+    tdc_unreset(gpio_chip);
+    dsp_unreset(gpio_chip);
+    configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
+    std::cout << "Set start mode to " << config.tdc_config.tdc_start_mode << std::endl;
     tdc_start_mode(config.tdc_config.tdc_start_mode, gpio_chip);
+    std::cout << "Set coarse mode to " << config.tdc_config.tdc_coarse_mode << std::endl;
     tdc_coarse_mode(config.tdc_config.tdc_coarse_mode, gpio_chip);
+    std::cout << "Set external mode to " << config.tdc_config.tdc_external_mode << std::endl;
     tdc_external_mode(config.tdc_config.tdc_external_mode, gpio_chip);
+    std::cout << "Set scheduler external mode to " << config.tdc_config.scheduler_external_mode << std::endl;
     scheduler_external_mode(config.tdc_config.scheduler_external_mode, gpio_chip);
-    tdc_coarse_mode(config.tdc_config.tdc_coarse_mode, gpio_chip);
+    //tdc_coarse_mode(config.tdc_config.tdc_coarse_mode, gpio_chip);
     scheduler_reset(gpio_chip);
     scheduler_unreset(gpio_chip);
+    dsp_enable(gpio_chip);
     tdc_enable(gpio_chip);
-    tdc_serializer(1, gpio_chip);
+    //tdc_reset(gpio_chip);
+    // tdc_unreset(gpio_chip);
     scheduler_enable(1, gpio_chip);
-
+    
     std::cout << "setting leds to 0x01" << std::endl;
     set_gpio_array(led_chip, &led_lines, led_values);
-
+    
     // Open output file
-    std::ofstream output_fp(output_file_path, std::ios::out | std::ios::trunc);
+    std::ofstream output_fp("outputs/"+output_file_path, std::ios::out | std::ios::trunc);
     if (!output_fp) {
         perror("Failed to open output file");
         return -1;
     }
 
+    std::cout << "set serializer to " << config.io_dev_config.nbits_rx << " bits" << std::endl;
     set_rx_nbits(config.io_dev_config.nbits_rx);
     enable_rx();
+    tdc_serializer(1, gpio_chip);
 
+    //return 0;
     // Start FIFO reading thread
     running = true;
     std::thread read_from_fifo_thread(read_from_fifo_thread_fn, std::ref(output_fp), read_fifo_fd);
@@ -265,6 +280,8 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
 
     usleep(100);
     while (running) {
+        //tdc_reset(gpio_chip);
+        //tdc_unreset(gpio_chip);
         while (rx_occupancy < MAX_BUF_SIZE_BYTES && running) {
             ioctl(read_fifo_fd, AXIS_FIFO_GET_RX_OCCUPANCY, &rx_occupancy);
             usleep(10);
@@ -287,23 +304,23 @@ void read_from_fifo_thread_fn(std::ofstream& output_fp, int read_fifo_fd)
                 for (int mem_idx = 0; mem_idx < bytes_fifo / 4; mem_idx++) {
                     int value;
                     if (debug_log_enabled){
-                        std::cout << "0x" << std::hex << (int) buf[3] 
-                                        << std::hex << (int) buf[2] 
-                                        << std::hex << (int) buf[1] 
-                                        << std::hex << (int) buf[0] << std::endl;
+                        std::cout << "0x" << std::hex << (int) buf[mem_idx * 4] 
+                                        << std::hex << (int) buf[mem_idx * 4 + 1] 
+                                        << std::hex << (int) buf[mem_idx * 4 + 2] 
+                                        << std::hex << (int) buf[mem_idx * 4 + 3] << std::endl;
                     }
                     std::memcpy(&value, &buf[mem_idx * 4], 4);
                     // if it's not the header or we haven't found the header yet, skip
                     if (value != 0xAA0AAAAA && (!found_header)) {
                         if (debug_log_enabled) {
-                            std::cout << "skipping 0x" << std::hex << value << std::endl;
+                            //std::cout << "skipping 0x" << std::hex << value << std::endl;
                         }
                         continue;
                     }
                     // if we found the header, we can start reading the data
                     found_header = 1;
                     if (debug_log_enabled) {
-                        std::cout << "0x" << std::hex << value << std::endl;
+                        std::cout << "v0x" << std::hex << value << std::endl;
                     }
                     rx_values.push_back(value);
                     output_fp << std::hex << value << std::endl;
