@@ -92,6 +92,17 @@ int generate_random_number(double mean, double std_dev) {
     return (int) (mean + std_dev * z);
 }
 
+int dsp_config(Config config, struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
+    // reset all
+    init_gpio_gnd(chip, gpios);
+
+    //enable digital
+    dsp_enable(chip);
+    tdc_tof_test_mode(config.dsp_config.external_tof_mode, chip);
+    dsp_serializer(1, chip);
+    return 0;
+}
+
 int main(int argc, char** argv) {
 
     process_config(argc, argv);
@@ -139,7 +150,7 @@ int main(int argc, char** argv) {
     set_gpio_array(chip, &gpios, hpc1_values);
 
     //reset/unreset dsp
-    dsp_test(chip, &gpios);
+    dsp_config(config, chip, &gpios);
     dsp_reset(chip);
     dsp_unreset(chip);
 
@@ -175,39 +186,41 @@ int main(int argc, char** argv) {
     int runtime = config.runtime;
     while (running && duration < runtime) {
         // send random number to DSP
-        int random_number;
-        // generate a uniform random between 0 and 1
-        double u = (double)rand() / RAND_MAX;
- 
-        if(u < config.dsp_config.snr) {
-            // which kernel it is
-            int kernel_share[NUM_KERNELS];
-            //kernel_share[0] = (1 - config.snr)*config.kernel_weights[0]; do we care?
-            kernel_share[1] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[1];
-            kernel_share[2] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[2];
-            kernel_share[3] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[3];
-            if(u > kernel_share[3] + kernel_share[2] + kernel_share[1]) { //kernel 0
-                random_number = generate_random_number(config.dsp_config.kernel_means[0], config.dsp_config.kernel_std_devs[0]);
-            } else if(u > kernel_share[3] + kernel_share[2]) { //kernel 1
-                random_number = generate_random_number(config.dsp_config.kernel_means[1], config.dsp_config.kernel_std_devs[1]);
-            } else if(u > kernel_share[3]) { //kernel 2
-                random_number = generate_random_number(config.dsp_config.kernel_means[2], config.dsp_config.kernel_std_devs[2]);
-            } else { //kernel 3
-                random_number = generate_random_number(config.dsp_config.kernel_means[3], config.dsp_config.kernel_std_devs[3]);
+        if (config.dsp_config.external_tof_mode){
+            int random_number;
+            // generate a uniform random between 0 and 1
+            double u = (double)rand() / RAND_MAX;
+    
+            if(u < config.dsp_config.snr) {
+                // which kernel it is
+                int kernel_share[NUM_KERNELS];
+                //kernel_share[0] = (1 - config.snr)*config.kernel_weights[0]; do we care?
+                kernel_share[1] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[1];
+                kernel_share[2] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[2];
+                kernel_share[3] = (1 - config.dsp_config.snr)*config.dsp_config.kernel_weights[3];
+                if(u > kernel_share[3] + kernel_share[2] + kernel_share[1]) { //kernel 0
+                    random_number = generate_random_number(config.dsp_config.kernel_means[0], config.dsp_config.kernel_std_devs[0]);
+                } else if(u > kernel_share[3] + kernel_share[2]) { //kernel 1
+                    random_number = generate_random_number(config.dsp_config.kernel_means[1], config.dsp_config.kernel_std_devs[1]);
+                } else if(u > kernel_share[3]) { //kernel 2
+                    random_number = generate_random_number(config.dsp_config.kernel_means[2], config.dsp_config.kernel_std_devs[2]);
+                } else { //kernel 3
+                    random_number = generate_random_number(config.dsp_config.kernel_means[3], config.dsp_config.kernel_std_devs[3]);
+                }
+            } else {
+                random_number = rand(); // its a uniform noise
             }
-        } else {
-            random_number = rand(); // its a uniform noise
+            
+            //record random number
+            fprnd << random_number << std::endl;
+            std::cout << "random number " << (0xFFFF & random_number) << std::endl;
+
+            //prepare for device
+            chain_data[3] = 0xFFFF & (random_number);
+            configure_chain_dsp(chain_data, 4, 16, 1000);
         }
-        
-        //record random number
-        fprnd << random_number << std::endl;
-        std::cout << "random number " << (0xFFFF & random_number) << std::endl;
-
-        //prepare for device
-        chain_data[3] = 0xFFFF & (random_number);
-        configure_chain_dsp(chain_data, 4, 16, 1000);
-
         // update time
+        // if internal, just wait :)
         stop = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
     }

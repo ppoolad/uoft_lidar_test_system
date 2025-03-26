@@ -25,6 +25,7 @@ typedef struct {
     int kernel_means[NUM_KERNELS];
     int kernel_std_devs[NUM_KERNELS];
     float kernel_weights[NUM_KERNELS];
+    int external_tof_mode;
 } DSP_config;
 
 typedef struct {

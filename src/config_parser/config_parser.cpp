@@ -105,7 +105,11 @@ Config parse_config(std::string filename) {
                 config.tdc_config.tdc_external_mode = std::stoi(value);
             } else if (key == "scheduler_external_mode") {
                 config.tdc_config.scheduler_external_mode = std::stoi(value);
-            } else {
+            } else if (key == "dsp_external_tof_mode") {
+                config.dsp_config.external_tof_mode = std::stoi(value);
+            }
+            
+            else {
                 std::cerr << "Error: unknown key " << key << std::endl;
             }
         }
