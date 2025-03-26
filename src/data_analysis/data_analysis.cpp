@@ -14,7 +14,7 @@
 #include <string>
 //#include <yaml-cpp/yaml.h>
 
-#define SOF "aaaaaa"
+#define SOF "aa0aaaaa"
 #define HEADER "0xaa"
 #define SUBTRACT_HEADER 8+2+2+2
 #define MEMORY_WORD_LENGTH 6
@@ -45,7 +45,7 @@
  * @return A vector of integers containing the extracted memory words.
  */
 
-std::vector<int> extract_memory_words(const std::string &filename, int packet_number) {
+std::vector<int> extract_memory_words(const std::string &filename, int packet_number, int adjust_start = 0) {
     // Read the configuration from the config.yaml file
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -65,12 +65,40 @@ std::vector<int> extract_memory_words(const std::string &filename, int packet_nu
             continue;
         }
         if (found) {
+            //std::cout << "found " << line << std::endl;
             line_counter++;
             if(line_counter == packet_number) {
-            std::string memory_word = line.substr(SUBTRACT_HEADER, MEMORY_WORD_LENGTH-2);
-            std::cout << "Memory word: " << memory_word << std::endl;
-            memory_words.push_back(std::stoi(memory_word, nullptr, 16));
-            found = false;
+                std::cout << line << std::endl;
+                // check if the length is 8 charachters
+                if(line.length() < 8){
+                    std::cout << "Line length is less than 8 characters" << std::endl;
+                    found = false;
+                    continue;                
+                } 
+                std::string memory_word = line.substr(2, 8);
+                int start_word = 0;
+                if(adjust_start){
+                    int lines_to_ch6 = 6 - packet_number;
+                    if(lines_to_ch6 > 0){
+                        for(int i = 0; i < lines_to_ch6; i++){
+                            if(std::getline(file, line)){
+                                //std::cout << "Skipped line: " << line << std::endl;
+                                line_counter++;
+                                if(line.length() >= 8) start_word = std::stoi(line.substr(2, 8), nullptr, 16); // this should be start
+                            }
+
+                        }
+                    }
+                }
+                std::cout << "Memory word: " << memory_word << std::endl;
+                if(memory_word.length() >= 6){
+                int memory_word_int = std::stoi(memory_word, nullptr, 16);
+                int start_word_int = start_word;
+                memory_word_int = 62 - start_word_int + memory_word_int;
+                memory_words.push_back(memory_word_int);
+                    std::cout << "STOI: "<< memory_words.back() << std::endl;
+                }
+                found = false;
             }
         }
     }
@@ -90,16 +118,20 @@ std::unordered_map<int, int> calculate_histogram(const std::vector<int> &memory_
 
 int main(int argc, char *argv[]) {
     if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <filename> <packet_number> <output_name>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <filename> <packet_number> <output_name> <start_adjust>" << std::endl;
         return 1;
     }
     std::string filename = argv[1];
     int packet_number = std::stoi(argv[2]);
     std::string output_name = argv[3];
+    int adjust_start = 0;
+    if (argc == 5){
+        adjust_start = std::stoi(argv[4]);
+    }
 
     //cfg = read_config("config.yaml");
 
-    std::vector<int> memory_words = extract_memory_words(filename, packet_number);
+    std::vector<int> memory_words = extract_memory_words(filename, packet_number, adjust_start);
     if (memory_words.empty()) {
         std::cerr << "Error extracting memory words" << std::endl;
         return 1;
@@ -113,7 +145,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Store the content of the vector as integers in a text file
-    std::ofstream output_file(output_name+"extracted_memory_words.txt");
+    std::ofstream output_file("outputs/"+output_name+"_extracted_memory_words.txt");
     if (!output_file.is_open()) {
         std::cerr << "Error opening output file" << std::endl;
         return 1;
