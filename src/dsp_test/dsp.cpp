@@ -96,10 +96,39 @@ int dsp_config(Config config, struct gpiod_chip *chip, struct gpiod_line_bulk *g
     // reset all
     init_gpio_gnd(chip, gpios);
 
+    //configure settigns here later
+    int chain_data[10] = {0};
+
     //enable digital
     dsp_enable(chip);
     tdc_tof_test_mode(config.dsp_config.external_tof_mode, chip);
-    dsp_serializer(1, chip);
+    return 0;
+}
+
+int tdc_config(Config config, struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
+    // reset all
+    init_gpio_gnd(chip, gpios);
+    tdc_unreset(chip);
+
+    //config tdc_settings
+    int chain_data[4] = {0};
+    create_tdc_chain(config.tdc_config.channel_enables, config.tdc_config.channel_offsets, chain_data);
+    configure_chain(chain_data, config.tdc_config.tdc_chain_num_words, config.tdc_config.tdc_chain_num_bits, config.tdc_config.tdc_chain_timeout);
+
+    //config pins
+    tdc_start_mode(config.tdc_config.tdc_start_mode, chip);
+    tdc_coarse_mode(config.tdc_config.tdc_coarse_mode, chip);
+    tdc_external_mode(config.tdc_config.tdc_external_mode, chip);
+    
+    // config scheduler pins
+    scheduler_external_mode(config.tdc_config.scheduler_external_mode, chip);
+    scheduler_unreset(chip);
+
+    //enable tdc
+    tdc_enable(chip);
+    
+    //enable scheduler
+    scheduler_enable(1, chip);
     return 0;
 }
 
@@ -149,7 +178,10 @@ int main(int argc, char** argv) {
     std::cout << "setting ASIC GPIOs to 0" << std::endl;
     set_gpio_array(chip, &gpios, hpc1_values);
 
-    //reset/unreset dsp
+    //config dsp if not external mode
+    if(!config.dsp_config.external_tof_mode){
+        tdc_config(config, chip, &gpios);
+    }
     dsp_config(config, chip, &gpios);
     dsp_reset(chip);
     dsp_unreset(chip);
@@ -177,6 +209,9 @@ int main(int argc, char** argv) {
     set_rx_nbits(config.io_dev_config.nbits_rx); // 16 data + 8 header
     enable_rx();
     dsp_serializer(1, chip);
+
+    //no need really, added to debug first
+    tdc_serializer(1, chip);
 
     // start the clock
     auto start = std::chrono::high_resolution_clock::now();
