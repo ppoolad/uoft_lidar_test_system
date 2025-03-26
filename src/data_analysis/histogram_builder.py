@@ -36,7 +36,9 @@ def read_data(file_path):
                 data_point = int(lines[i],16) & 0x00FFFFFF
             except ValueError:
                 raise ValueError(f"Invalid data at line {i+1}: '{lines[i]}'")
-            channels[ch].append(data_point-start_tof)
+            
+            if data_point >= 0:
+	            channels[ch].append(data_point-start_tof)
             i += 1
 
         i += 1
@@ -56,16 +58,16 @@ def read_data(file_path):
         
     return channels
 
-def plot_histograms(channels):
+def plot_histograms(channels, out_file):
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     axes = axes.ravel()
     for ch in range(6):
-        axes[ch].hist(channels[ch], bins=20, color='skyblue', edgecolor='black')
+        axes[ch].hist(channels[ch], bins=range(1,64000,1000), color='skyblue', edgecolor='black')
         axes[ch].set_title(f"Channel {ch}")
         axes[ch].set_xlabel("Value")
         axes[ch].set_ylabel("Frequency")
     plt.tight_layout()
-    plt.show()
+    plt.savefig("./" + out_file[:-4]+"_hist.pdf")
 
 def main():
     parser = argparse.ArgumentParser(description="Display histograms for each data channel from the input file.")
@@ -73,7 +75,7 @@ def main():
     args = parser.parse_args()
     
     channels = read_data(args.file)
-    plot_histograms(channels)
+    plot_histograms(channels,args.file)
 
 if __name__ == "__main__":
     main()
