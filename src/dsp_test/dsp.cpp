@@ -31,7 +31,7 @@ extern "C" {
 #include "conf.h"
 #include "simple_rx.h"
 }
-#define DEBUG 1
+int DEBUG=1;
 //globlas
 //gpio stuff
 static volatile bool running = true;
@@ -94,7 +94,7 @@ int generate_random_number(double mean, double std_dev) {
 
 int dsp_config(Config config, struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     // reset all
-    init_gpio_gnd(chip, gpios);
+    // init_gpio_gnd(chip, gpios);
 
     //configure settigns here later
     int chain_data[10] = {0};
@@ -107,7 +107,7 @@ int dsp_config(Config config, struct gpiod_chip *chip, struct gpiod_line_bulk *g
 
 int tdc_config(Config config, struct gpiod_chip *chip, struct gpiod_line_bulk *gpios){
     // reset all
-    init_gpio_gnd(chip, gpios);
+    //init_gpio_gnd(chip, gpios);
     tdc_unreset(chip);
 
     //config tdc_settings
@@ -179,6 +179,7 @@ int main(int argc, char** argv) {
     set_gpio_array(chip, &gpios, hpc1_values);
 
     //config dsp if not external mode
+    init_gpio_gnd(chip, &gpios);
     if(!config.dsp_config.external_tof_mode){
         tdc_config(config, chip, &gpios);
     }
@@ -212,7 +213,7 @@ int main(int argc, char** argv) {
 
     //no need really, added to debug first
     tdc_serializer(1, chip);
-
+    //return 0;
     // start the clock
     auto start = std::chrono::high_resolution_clock::now();
     auto stop = std::chrono::high_resolution_clock::now();
@@ -316,7 +317,7 @@ void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd)
         while(rx_occupancy < MAX_BUF_SIZE_BYTES && running){
             ioctl(readFifoFd, AXIS_FIFO_GET_RX_OCCUPANCY, &rx_occupancy);
             if(DEBUG) std::cout << "rx_occupancy: " << rx_occupancy << std::endl;
-            sleep(100);
+            usleep(10000);
         }
 
         // fifo is full stop RX
@@ -359,13 +360,13 @@ void read_from_fifo_thread_fn(std::ofstream& fp, int readFifoFd)
                     std::cout << "0x" << std::hex << value << std::endl;
                     rx_values.push_back(value&0x00FFFFFF); // first byte is header
                     // write to file
-                    fp << value << std::endl;
+                    fp << std::hex << value << std::endl;
 
                     packets_rx = packets_rx + 4;
                 }       
             }
         }
-        if(DEBUG) std::cout << packets_rx-4 << " packets read" << std::endl;
+        //if(DEBUG) std::cout << packets_rx-4 << " packets read" << std::endl;
 
     }
 
